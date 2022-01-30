@@ -53,8 +53,8 @@ jobs:
             -t ghcr.io/$IMGBOT_IMAGE \
             -t ghcr.io/$GHCR_REPO:latest \
             -f Dockerfile.bot \
-            --push \
             .
+          docker image push --all-tags ghcr.io/$GHCR_REPO
 
       - name: Build and push version (server)
         if: ${{ steps.is_duplicated.outputs.result == 'false' }}
@@ -66,5 +66,6 @@ jobs:
             -t ghcr.io/$IMGBOT_IMAGE \
             -t ghcr.io/$GHCR_REPO_SERVER:latest \
             -f Dockerfile.server \
-            --push \
             .
+
+          docker image push --all-tags ghcr.io/$GHCR_REPO_SERVER
