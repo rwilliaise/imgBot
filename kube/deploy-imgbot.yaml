@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: img-bot
+spec:
+  selector:
+    matchLabels:
+      app: img-bot
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: img-bot
+    spec:
+      containers:
+        - name: img-bot
+          image: rwilliaise/imgbot
+          env:
+            - name: IMGBOT_DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: imgbot-secret
+                  key: token
+            - name: IMGBOT_DISCORD_APPID
+              valueFrom:
+                secretKeyRef:
+                  name: imgbot-secret
+                  key: appid

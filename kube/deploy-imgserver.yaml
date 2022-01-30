@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: img-server
+spec:
+  selector:
+    matchLabels:
+      app: img-server
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: img-server
+    spec:
+      containers:
+        - name: img-server
+          image: rwilliaise/imgbot-server
+          ports:
+            - containerPort: 8080

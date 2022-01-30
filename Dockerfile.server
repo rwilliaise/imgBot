@@ -1,0 +1,23 @@
+
+FROM lukemathwalker/cargo-chef:latest-rust-1.58.1 AS chef
+WORKDIR app
+
+FROM chef AS planner
+COPY /server/ .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY /server/ .
+RUN cargo build --release --bin img_server
+
+FROM debian:buster-slim
+WORKDIR app
+
+COPY --from=builder /app/target/release/img_server /usr/local/bin
+
+EXPOSE 8080
+CMD ["/usr/local/bin/img_server"]
