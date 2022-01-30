@@ -1,0 +1,14 @@
+FROM rust:1.57 as build
+
+RUN mkdir bot
+WORKDIR bot
+
+COPY bot/* ./
+
+RUN cargo build --release
+
+FROM debian:buster-slim
+
+COPY --from=build /imgBot/target/release/imgBot /usr/bin/imgBot
+
+CMD ["/usr/bin/imgBot"]
