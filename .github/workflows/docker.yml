@@ -3,7 +3,7 @@ on:
     branches: [main]
 
 env:
-  GHCR_REPO: ${{ github.actor }}/imgbot
+  GHCR_REPO: ghcr.io/${{ github.actor }}/imgbot
 
 jobs:
   push_server:
