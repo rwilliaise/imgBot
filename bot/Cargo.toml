@@ -1,6 +1,6 @@
 [package]
 name = "img_bot"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["rwilliaise"]
 license = "MIT"
 edition = "2021"

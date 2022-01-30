@@ -1,0 +1,70 @@
+on:
+  push:
+    branches: [main]
+
+env:
+  GHCR_REPO_SERVER: ${{ github.actor }}/imgbot-server
+  GHCR_REPO: ${{ github.actor }}/imgbot
+
+jobs:
+  push_server:
+    name: Push Server to Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get package version
+        id: package_version
+        run: |-
+          git fetch --tags
+          VER=$(git tag --sort="-v:refname" | head -n 1 | cut -d"v" -f2)
+          echo ::set-output name=result::$VER
+
+      - name: Determine if duplicated
+        id: is_duplicated
+        run: |
+          IMGBOT_VERSION=${{ steps.package_version.outputs.result }}
+          IMGBOT_IMAGE=$GHCR_REPO:$IMGBOT_VERSION
+          if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect IMGBOT_IMAGE >/dev/null; then
+            echo "There is already a pushed image for v${IMGBOT_VERSION}. Skipping."
+            echo ::set-output name=result::true
+          else
+            echo ::set-output name=result::false
+          fi
+
+      - name: Build and push version (bot)
+        if: ${{ steps.is_duplicated.outputs.result == 'false' }}
+        run: |
+          IMGBOT_VERSION=${{ steps.package_version.outputs.result }}
+          IMGBOT_IMAGE=$GHCR_REPO:$IMGBOT_VERSION
+
+          docker build \
+            -t ghcr.io/$IMGBOT_IMAGE
+            -t ghcr.io/$GHCR_REPO:latest
+            -f Dockerfile.bot
+            --push
+            .
+
+      - name: Build and push version (server)
+        if: ${{ steps.is_duplicated.outputs.result == 'false' }}
+        run: |
+          IMGBOT_VERSION=${{ steps.package_version.outputs.result }}
+          IMGBOT_IMAGE=$GHCR_REPO_SERVER:$IMGBOT_VERSION
+
+          docker build \
+            -t ghcr.io/$IMGBOT_IMAGE
+            -t ghcr.io/$GHCR_REPO_SERVER:latest
+            -f Dockerfile.server
+            --push
+            .
