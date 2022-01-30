@@ -50,10 +50,10 @@ jobs:
           IMGBOT_IMAGE=$GHCR_REPO:$IMGBOT_VERSION
 
           docker build \
-            -t ghcr.io/$IMGBOT_IMAGE
-            -t ghcr.io/$GHCR_REPO:latest
-            -f Dockerfile.bot
-            --push
+            -t ghcr.io/$IMGBOT_IMAGE \
+            -t ghcr.io/$GHCR_REPO:latest \
+            -f Dockerfile.bot \
+            --push \
             .
 
       - name: Build and push version (server)
@@ -63,8 +63,8 @@ jobs:
           IMGBOT_IMAGE=$GHCR_REPO_SERVER:$IMGBOT_VERSION
 
           docker build \
-            -t ghcr.io/$IMGBOT_IMAGE
-            -t ghcr.io/$GHCR_REPO_SERVER:latest
-            -f Dockerfile.server
-            --push
+            -t ghcr.io/$IMGBOT_IMAGE \
+            -t ghcr.io/$GHCR_REPO_SERVER:latest \
+            -f Dockerfile.server \
+            --push \
             .
