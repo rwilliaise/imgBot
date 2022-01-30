@@ -52,7 +52,7 @@ jobs:
         run: |
           IMGBOT_VERSION=${{ steps.package_version.outputs.result }}
           IMGBOT_IMAGE=$GHCR_REPO:$IMGBOT_VERSION
-          if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect IMGBOT_IMAGE >/dev/null; then
+          if DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect $IMGBOT_IMAGE >/dev/null; then
             echo "There is already a pushed image for v${IMGBOT_VERSION}. Skipping."
             echo ::set-output name=result::true
           else

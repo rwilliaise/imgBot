@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: img-bot
-          image: rwilliaise/imgbot:latest
+          image: ghcr.io/rwilliaise/imgbot:latest
           env:
             - name: IMGBOT_DISCORD_TOKEN
               valueFrom:
