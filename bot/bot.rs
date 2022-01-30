@@ -43,6 +43,8 @@ impl EventHandler for BotHandler {
                 .name("ping")
                 .description("Check if imgBot is alive.")
         }).await.expect("Command creation err");
+
+        println!("Starting bot!")
     }
 
     async fn interaction_create(&self, _ctx: Context, _interaction: Interaction) {
