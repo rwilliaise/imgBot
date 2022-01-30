@@ -4,6 +4,7 @@ on:
 
 env:
   GHCR_REPO: ghcr.io/${{ github.actor }}/imgbot
+  GHCR_REPO_SERVER: ghcr.io/${{ github.actor }}/imgbot-server
 
 jobs:
   push_server:
@@ -43,8 +44,8 @@ jobs:
           echo ::set-output name=result::${VER}
           echo ::set-output name=image::${GHCR_REPO}:${VER}
           echo ::set-output name=image_latest::${GHCR_REPO}:latest
-          echo ::set-output name=image_server::${GHCR_REPO}:${VER}-server
-          echo ::set-output name=image_server_latest::${GHCR_REPO}:latest-server
+          echo ::set-output name=image_server::${GHCR_REPO_SERVER}:${VER}
+          echo ::set-output name=image_server_latest::${GHCR_REPO_SERVER}:latest
 
       - name: Determine if duplicated
         id: is_duplicated
