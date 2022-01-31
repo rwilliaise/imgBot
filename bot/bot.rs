@@ -113,13 +113,12 @@ impl BotHandler {
                 }
                 "caption" => {
                     let mut message = self.command_followup_msg(&command, &_ctx.http, "Uploading... 1/4\n🟩⬛⬛⬛", true).await?;
-                    Ok(())
                 }
                 _ => {
                     self.command_response_msg(&command, &_ctx.http, "Not implemented", true).await?
                 }
             }
-        }
+        };
         Ok(())
     }
 }
@@ -131,7 +130,7 @@ impl EventHandler for BotHandler {
             command
                 .name("ping")
                 .description("Check if imgBot is alive.")
-        });
+        }).await;
 
         self.create_command(&_ctx.http, |command| {
             command
@@ -149,13 +148,13 @@ impl EventHandler for BotHandler {
                         .kind(ApplicationCommandOptionType::String)
                         .required(false)
                 })
-        });
+        }).await;
 
         println!("Starting bot!")
     }
 
     async fn interaction_create(&self, _ctx: Context, _interaction: Interaction) {
-        if let Err(e) = self.process_command(&_ctx, &_interaction) {
+        if let Err(e) = self.process_command(&_ctx, &_interaction).await {
             println!("Encountered command process error: {}", e)
         };
     }
