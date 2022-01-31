@@ -139,12 +139,14 @@ impl EventHandler for BotHandler {
                 .create_option(|option| {
                     option
                         .name("text")
+                        .description("Caption text")
                         .kind(ApplicationCommandOptionType::String)
                         .required(true)
                 })
                 .create_option(|option| {
                     option
                         .name("url")
+                        .description("Optionally, target url")
                         .kind(ApplicationCommandOptionType::String)
                         .required(false)
                 })
