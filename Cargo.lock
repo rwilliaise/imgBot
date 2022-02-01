@@ -780,7 +780,7 @@ dependencies = [
 
 [[package]]
 name = "img_bot"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "err-context",
  "reqwest",
@@ -790,7 +790,7 @@ dependencies = [
 
 [[package]]
 name = "img_server"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "actix-rt",
  "actix-web",
