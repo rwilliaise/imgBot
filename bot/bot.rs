@@ -23,7 +23,7 @@ use serenity::{
 use serenity::builder::CreateApplicationCommand;
 use serenity::model::interactions::application_command::ApplicationCommandOptionType;
 
-struct BotHandler {
+pub struct BotHandler {
     client: reqwest::Client,
     url_base: &'static str
 }
@@ -43,48 +43,16 @@ impl BotHandler {
         }
     }
 
+    async fn add_commands(&self) {
+
+    }
+
     fn get_url(&self, url: &str) -> String {
         String::from(self.url_base).add(url)
     }
 
     async fn send_get(&self, url: &str) -> reqwest::Result<Response> {
         self.client.get(self.get_url(url)).send().await
-    }
-
-    async fn command_response_msg(&self, command: &ApplicationCommandInteraction, http: impl AsRef<Http>, content: &str, ephemeral: bool) -> std::result::Result<(), SerenityError> {
-        command.create_interaction_response(http, |response| {
-            response
-                .kind(InteractionResponseType::ChannelMessageWithSource)
-                .interaction_response_data(|message|
-                    message.content(content)
-                        .flags(match ephemeral {
-                            true => InteractionApplicationCommandCallbackDataFlags::EPHEMERAL,
-                            _ => InteractionApplicationCommandCallbackDataFlags::empty()
-                        })
-                )
-        }).await
-    }
-
-    async fn command_followup_msg(&self, command: &ApplicationCommandInteraction, http: impl AsRef<Http>, content: &str, ephemeral: bool) -> std::result::Result<Message, SerenityError> {
-        command.create_followup_message(http, |response| {
-            response
-                .content(content)
-                .flags(match ephemeral {
-                    true => InteractionApplicationCommandCallbackDataFlags::EPHEMERAL,
-                    _ => InteractionApplicationCommandCallbackDataFlags::empty()
-                })
-        }).await
-    }
-
-    async fn command_edit_followup_msg(&self, command: &ApplicationCommandInteraction, message: &Message, http: impl AsRef<Http>, content: &str, ephemeral: bool) -> serenity::Result<Message> {
-        command.edit_followup_message(http, message, |response| {
-            response
-                .content(content)
-                .flags(match ephemeral {
-                    true => InteractionApplicationCommandCallbackDataFlags::EPHEMERAL,
-                    _ => InteractionApplicationCommandCallbackDataFlags::empty()
-                })
-        }).await
     }
 
     async fn create_command<F>(
@@ -98,7 +66,7 @@ impl BotHandler {
         ApplicationCommand::create_global_application_command(http, f).await.expect("Command creation err");
     }
 
-    async fn process_command(&self, _ctx: &Context, _interaction: &Interaction) -> std::result::Result<(), serenity::Error> {
+    async fn process_command(&self, _ctx: Context, _interaction: Interaction) -> std::result::Result<(), serenity::Error> {
         if let Interaction::ApplicationCommand(command) = _interaction {
             match command.data.name.as_str() {
                 "ping" => {
@@ -156,7 +124,7 @@ impl EventHandler for BotHandler {
     }
 
     async fn interaction_create(&self, _ctx: Context, _interaction: Interaction) {
-        if let Err(e) = self.process_command(&_ctx, &_interaction).await {
+        if let Err(e) = self.process_command(_ctx, _interaction).await {
             println!("Encountered command process error: {}", e)
         };
     }

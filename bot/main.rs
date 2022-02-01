@@ -1,5 +1,6 @@
 mod bot;
 mod caption;
+mod command;
 
 #[tokio::main]
 async fn main() {
