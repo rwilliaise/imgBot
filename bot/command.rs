@@ -1,16 +1,13 @@
-use std::borrow::{Borrow, BorrowMut};
-use std::future::Future;
-use std::ops::Deref;
 use std::sync::Arc;
-use err_context::AnyError;
 use getopts::Fail;
 use serenity::http::Http;
 use serenity::model::channel::Message;
 use serenity::async_trait;
-use crate::bot::BotHandler;
+use crate::bot::BotLock;
 
 pub struct CommandRunArgs {
     pub http: Arc<Http>,
+    pub bot: BotLock,
     pub matches: getopts::Matches,
     pub msg: Message,
     pub opts: Arc<getopts::Options>,
@@ -39,17 +36,18 @@ impl Command {
     pub async fn run(
         &self,
         http: Arc<Http>,
+        bot: BotLock,
         args: Vec<String>,
         msg: Message
     ) {
         let opts = self.opts.clone();
         let matches = self.opts.parse(&args[1..]);
 
-
         match matches {
             Ok(matches) => {
                 self.runnable.run(CommandRunArgs {
                     http,
+                    bot,
                     matches,
                     msg,
                     opts
