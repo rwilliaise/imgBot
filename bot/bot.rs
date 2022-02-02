@@ -1,5 +1,4 @@
 use std::env;
-use std::error::Error;
 use std::ops::Add;
 use err_context::AnyError;
 use reqwest::Response;
@@ -8,29 +7,29 @@ use serenity::{
     model::{
         gateway::Ready,
         interactions::{
-            application_command::{
-                ApplicationCommand,
-            },
             Interaction,
-            InteractionResponseType,
         },
         prelude::*,
-        prelude::application_command::ApplicationCommandInteraction
     },
     prelude::*,
-    http::Http,
 };
-use serenity::builder::CreateApplicationCommand;
-use serenity::model::interactions::application_command::ApplicationCommandOptionType;
+use std::collections::HashMap;
+use std::future::Future;
+use std::sync::Arc;
+use crate::command::Command;
 
 pub struct BotHandler {
+    pub prefix: HashMap<GuildId, String>,
+    commands: HashMap<String, Command>,
     client: reqwest::Client,
     url_base: &'static str
 }
 
 impl BotHandler {
-    fn new() -> Self {
-        Self {
+    async fn new() -> Self {
+        let mut handler = Self {
+            prefix: Default::default(),
+            commands: Default::default(),
             client: reqwest::Client::builder().build().expect("http client build failure"),
             url_base: match env::var("KUBERNETES_SERVICE_HOST") {
                 Ok(_) => { // we are running in k8s
@@ -39,12 +38,15 @@ impl BotHandler {
                 Err(_) => {
                     "http://localhost:8080"
                 }
-            }
-        }
+            },
+        };
+
+        handler.add_commands().await;
+        handler
     }
 
-    async fn add_commands(&self) {
-
+    async fn add_commands(&mut self) {
+        self.add_command(crate::caption::caption()).await;
     }
 
     fn get_url(&self, url: &str) -> String {
@@ -55,71 +57,44 @@ impl BotHandler {
         self.client.get(self.get_url(url)).send().await
     }
 
-    async fn create_command<F>(
-        &self,
-        http: &Http,
-        f: F
-    )
-    where
-        F: FnOnce(&mut CreateApplicationCommand) -> &mut CreateApplicationCommand,
-    {
-        ApplicationCommand::create_global_application_command(http, f).await.expect("Command creation err");
+    async fn add_command(&mut self, mut command: Command) {
+        self.commands.insert(std::mem::take(&mut command.name), command);
     }
 
     async fn process_command(&self, _ctx: Context, _interaction: Interaction) -> std::result::Result<(), serenity::Error> {
-        if let Interaction::ApplicationCommand(command) = _interaction {
-            match command.data.name.as_str() {
-                "ping" => {
-                    match self.send_get("/health").await {
-                        Ok(_) => {
-                            self.command_response_msg(&command, &_ctx.http, "Pong!", false).await?
-                        }
-                        Err(e) => {
-                            self.command_response_msg(&command, &_ctx.http, &*format!("Ping failure (preferably report this to a dev):\n```{:#?}```", e.source().unwrap_or_else(|| &e)), true).await?
-                        }
-                    }
-                }
-                "caption" => {
-                    let mut message = self.command_followup_msg(&command, &_ctx.http, "Uploading... 1/4\n🟩⬛⬛⬛", true).await?;
-                }
-                _ => {
-                    self.command_response_msg(&command, &_ctx.http, "Not implemented", true).await?
-                }
-            }
-        };
+
         Ok(())
     }
 }
 
 #[async_trait]
 impl EventHandler for BotHandler {
+    async fn message(&self, _ctx: Context, _new_message: Message) {
+        let content = &_new_message.content;
+        let guild_id = &_new_message.guild_id;
+
+        if let Some(id) = guild_id {
+            let default = "=".to_string();
+            let prefix = self.prefix.get(&id).unwrap_or(&default);
+            if content.starts_with(prefix) {
+                println!("Command dispatched");
+                let content = &content[prefix.len()..].to_string();
+                let split: Vec<String> = crate::process::get_args(content);
+                let void = "<void>".to_string();
+
+                let command = split.get(0).unwrap_or(&void);
+                println!("Processing command: {}", command);
+
+                let command = self.commands.get(command);
+
+                if let Some(command) = command {
+                    command.run(_ctx.http.clone(), split, _new_message).await;
+                }
+            }
+        }
+    }
+
     async fn ready(&self, _ctx: Context, _data_about_bot: Ready) {
-        self.create_command(&_ctx.http, |command| {
-            command
-                .name("ping")
-                .description("Check if imgBot is alive.")
-        }).await;
-
-        self.create_command(&_ctx.http, |command| {
-            command
-                .name("caption")
-                .description("Caption an image with some text.")
-                .create_option(|option| {
-                    option
-                        .name("text")
-                        .description("Caption text")
-                        .kind(ApplicationCommandOptionType::String)
-                        .required(true)
-                })
-                .create_option(|option| {
-                    option
-                        .name("url")
-                        .description("Optionally, target url")
-                        .kind(ApplicationCommandOptionType::String)
-                        .required(false)
-                })
-        }).await;
-
         println!("Starting bot!")
     }
 
@@ -143,7 +118,7 @@ impl Bot {
     pub async fn new() -> std::result::Result<Self, AnyError> {
         let token = std::env::var("IMGBOT_DISCORD_TOKEN").expect("discord token fetch err");
         let id = std::env::var("IMGBOT_DISCORD_APPID").expect("discord appid fetch err").parse::<u64>()?;
-        let client = Client::builder(&token).application_id(id).event_handler(BotHandler::new()).await.expect("client build err");
+        let client = Client::builder(&token).application_id(id).event_handler(BotHandler::new().await).await.expect("client build err");
 
         Ok(Self {
             client

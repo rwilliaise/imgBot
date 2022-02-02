@@ -1,29 +1,34 @@
+use std::borrow::{Borrow, BorrowMut};
+use std::future::Future;
+use std::ops::Deref;
+use std::sync::Arc;
+use err_context::AnyError;
+use getopts::Fail;
 use serenity::http::Http;
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
+use serenity::model::channel::Message;
+use serenity::async_trait;
 use crate::bot::BotHandler;
 
-pub struct CommandRunArgs<'a> {
-    handler: &'a mut BotHandler,
-    http: &'a Http,
-    matches: getopts::Matches,
+pub struct CommandRunArgs {
+    pub http: Arc<Http>,
+    pub matches: getopts::Matches,
+    pub msg: Message,
+    pub opts: Arc<getopts::Options>,
 }
 
 pub struct Command {
-    name: String,
-    opts: getopts::Options,
-    runnable: Box<dyn Fn(CommandRunArgs)>,
+    pub name: String,
+    opts: Arc<getopts::Options>,
+    runnable: Arc<dyn CommandRun>,
 }
 
 impl Command {
 
-    pub fn new<F: 'static>(name: String, opts: getopts::Options, f: F) -> Self
-    where
-        F: Fn(CommandRunArgs)
-    {
+    pub fn new(name: String, opts: getopts::Options, f: Arc<dyn CommandRun + 'static>) -> Self {
         Self {
             name,
-            opts,
-            runnable: Box::new(f),
+            opts: Arc::new(opts),
+            runnable: f,
         }
     }
 
@@ -31,26 +36,47 @@ impl Command {
         Default::default()
     }
 
-    pub fn run(
+    pub async fn run(
         &self,
-        handler: &mut BotHandler,
-        http: &Http,
-        args: Vec<String>
+        http: Arc<Http>,
+        args: Vec<String>,
+        msg: Message
     ) {
-        let matches = self.opts.parse(args);
+        let opts = self.opts.clone();
+        let matches = self.opts.parse(&args[1..]);
+
 
         match matches {
             Ok(matches) => {
-                (self.runnable)(CommandRunArgs {
-                    handler,
+                self.runnable.run(CommandRunArgs {
                     http,
-                    matches
-                });
+                    matches,
+                    msg,
+                    opts
+                }).await;
             }
             Err(e) => {
-                println!("Execution err! {:#?}", e)
+                println!("Execution err! {:#?}", e);
+
+                match e {
+                    Fail::UnrecognizedOption(opt) => {
+                        msg.channel_id.say(&http, format!("Unrecognized option `{}`", opt)).await;
+                    }
+                    Fail::OptionDuplicated(opt) => {
+                        msg.channel_id.say(&http, format!("Duplicated option `{}`", opt)).await;
+                    }
+                    Fail::UnexpectedArgument(arg) => {
+                        msg.channel_id.say(&http, format!("Unexpected arg `{}`", arg)).await;
+                    }
+                    Fail::ArgumentMissing(arg) => {
+                        msg.channel_id.say(&http, format!("Missing arg `{}`", arg)).await;
+                    }
+                    Fail::OptionMissing(opt) => {
+                        msg.channel_id.say(&http, format!("Missing option `{}`", opt)).await;
+                    }
+                }
             }
-        }
+        };
     }
 }
 
@@ -58,18 +84,25 @@ impl Command {
 pub struct CommandBuilder {
     name: Option<String>,
     opts: getopts::Options,
-    run: Option<Box<dyn Fn(CommandRunArgs)>>,
+    run: Option<Arc<dyn CommandRun>>,
+}
+
+struct UnimplementedCommandRun;
+
+#[async_trait]
+impl CommandRun for UnimplementedCommandRun {
+    async fn run(&self, a: CommandRunArgs) {
+        unimplemented!()
+    }
 }
 
 impl CommandBuilder {
     pub fn build(&mut self) -> Command {
-        let run = match self.run.take() {
+        let mut run = match self.run.take() {
             Some(r) => r,
             None => {
                 println!("No run provided for command!");
-                Box::new(|e: CommandRunArgs| {
-                    unimplemented!()
-                })
+                Arc::new(UnimplementedCommandRun)
             }
         };
 
@@ -83,11 +116,8 @@ impl CommandBuilder {
         Command::new(name, std::mem::take(&mut self.opts), run)
     }
 
-    pub fn run<F: 'static>(&mut self, f: F) -> &mut Self
-    where
-        F: Fn(CommandRunArgs)
-    {
-        self.run = Some(Box::new(f));
+    pub fn run(&mut self, f: impl CommandRun + 'static) -> &mut Self {
+        self.run = Some(Arc::new(f));
         self
     }
 
@@ -103,4 +133,10 @@ impl CommandBuilder {
         f(&mut self.opts);
         self
     }
+}
+
+#[async_trait]
+pub trait CommandRun: Send + Sync {
+
+    async fn run(&self, a: CommandRunArgs);
 }
