@@ -46,7 +46,7 @@ impl EventHandler for BotHandler {
                 }
             }
 
-            let r = self.bot.read().await;
+            let mut r = self.bot.write().await;
             let default = "=".to_string();
             let prefix = r.prefix.get(&id).unwrap_or(&default);
             if content.starts_with(prefix) {
@@ -58,7 +58,7 @@ impl EventHandler for BotHandler {
                 let command = split.get(0).unwrap_or(&void);
                 println!("Processing command: {}", command);
 
-                let command = r.commands.get(command);
+                let mut command = r.commands.get(command);
 
                 if let Some(command) = command {
                     command.run(_ctx.http.clone(), self.bot.clone(), split, _new_message).await;

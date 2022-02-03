@@ -1,36 +1,39 @@
+use std::fmt::Debug;
 use std::sync::Arc;
-use getopts::Fail;
+use clap::ErrorKind;
+use err_context::ErrorExt;
 use serenity::http::Http;
 use serenity::model::channel::Message;
 use serenity::async_trait;
 use crate::bot::BotLock;
 
+pub type CommandAppCreate = Box<dyn Fn() -> clap::App<'static> + Send + Sync>;
+
 pub struct CommandRunArgs {
     pub http: Arc<Http>,
     pub bot: BotLock,
-    pub matches: getopts::Matches,
+    pub matches: clap::ArgMatches,
     pub msg: Message,
-    pub opts: Arc<getopts::Options>,
 }
 
 pub struct Command {
     pub name: String,
-    opts: Arc<getopts::Options>,
+    parser: CommandAppCreate,
     runnable: Arc<dyn CommandRun>,
 }
 
 impl Command {
 
-    pub fn new(name: String, opts: getopts::Options, f: Arc<dyn CommandRun + 'static>) -> Self {
+    pub fn new(name: String, parser: CommandAppCreate, f: Arc<dyn CommandRun + 'static>) -> Self {
         Self {
             name,
-            opts: Arc::new(opts),
+            parser,
             runnable: f,
         }
     }
 
-    pub fn builder() -> CommandBuilder {
-        Default::default()
+    pub fn builder(name: &'static str) -> CommandBuilder {
+        CommandBuilder::new(name)
     }
 
     pub async fn run(
@@ -40,8 +43,8 @@ impl Command {
         args: Vec<String>,
         msg: Message
     ) {
-        let opts = self.opts.clone();
-        let matches = self.opts.parse(&args[1..]);
+        let app = (self.parser)();
+        let matches: clap::Result<clap::ArgMatches> = app.try_get_matches_from(args);
 
         match matches {
             Ok(matches) => {
@@ -50,27 +53,20 @@ impl Command {
                     bot,
                     matches,
                     msg,
-                    opts
                 }).await;
             }
             Err(e) => {
-                println!("Execution err! {:#?}", e);
-
-                match e {
-                    Fail::UnrecognizedOption(opt) => {
-                        msg.channel_id.say(&http, format!("Unrecognized option `{}`", opt)).await;
+                match e.kind {
+                    ErrorKind::DisplayHelp => {
+                        msg.channel_id.say(http, format!("Help: ```{}```", e.to_string())).await;
                     }
-                    Fail::OptionDuplicated(opt) => {
-                        msg.channel_id.say(&http, format!("Duplicated option `{}`", opt)).await;
+                    ErrorKind::DisplayVersion => {
+                        msg.channel_id.say(http, e.to_string()).await;
                     }
-                    Fail::UnexpectedArgument(arg) => {
-                        msg.channel_id.say(&http, format!("Unexpected arg `{}`", arg)).await;
-                    }
-                    Fail::ArgumentMissing(arg) => {
-                        msg.channel_id.say(&http, format!("Missing arg `{}`", arg)).await;
-                    }
-                    Fail::OptionMissing(opt) => {
-                        msg.channel_id.say(&http, format!("Missing option `{}`", opt)).await;
+                    _ => {
+                        if e.kind != ErrorKind::DisplayHelp && e.kind != ErrorKind::DisplayVersion {
+                            msg.channel_id.say(http, format!("```{}```", e.to_string())).await;
+                        }
                     }
                 }
             }
@@ -78,10 +74,9 @@ impl Command {
     }
 }
 
-#[derive(Default)]
 pub struct CommandBuilder {
     name: Option<String>,
-    opts: getopts::Options,
+    app: Option<CommandAppCreate>,
     run: Option<Arc<dyn CommandRun>>,
 }
 
@@ -95,6 +90,14 @@ impl CommandRun for UnimplementedCommandRun {
 }
 
 impl CommandBuilder {
+    pub fn new(name: &'static str) -> Self {
+        Self {
+            app: Some(Box::new(|| { clap::App::new(&name.to_string()) })),
+            name: Some(String::from(name)),
+            run: None
+        }
+    }
+
     pub fn build(&mut self) -> Command {
         let mut run = match self.run.take() {
             Some(r) => r,
@@ -111,7 +114,7 @@ impl CommandBuilder {
             }
         };
 
-        Command::new(name, std::mem::take(&mut self.opts), run)
+        Command::new(name, std::mem::take(&mut self.app).unwrap(), run)
     }
 
     pub fn run(&mut self, f: impl CommandRun + 'static) -> &mut Self {
@@ -119,16 +122,8 @@ impl CommandBuilder {
         self
     }
 
-    pub fn name(&mut self, name: &str) -> &mut Self {
-        self.name = Some(name.to_string());
-        self
-    }
-
-    pub fn options<F>(&mut self, f: F) -> &mut Self
-    where
-        F: FnOnce(&mut getopts::Options) -> &mut getopts::Options
-    {
-        f(&mut self.opts);
+    pub fn options(&mut self, f: CommandAppCreate) -> &mut Self {
+        self.app = Some(f);
         self
     }
 }
