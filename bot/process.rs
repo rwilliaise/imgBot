@@ -1,4 +1,3 @@
-
 pub fn get_args(str: &String) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let current: &mut Vec<char> = &mut Vec::new();

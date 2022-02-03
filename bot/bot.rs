@@ -1,31 +1,23 @@
-use std::env;
-use std::ops::Add;
+use crate::command::Command;
 use err_context::AnyError;
 use reqwest::Response;
 use serenity::{
     async_trait,
-    model::{
-        gateway::Ready,
-        interactions::{
-            Interaction,
-        },
-        prelude::*,
-    },
+    model::{gateway::Ready, interactions::Interaction, prelude::*},
     prelude::*,
 };
 use std::collections::HashMap;
+use std::env;
+use std::ops::Add;
 use std::sync::Arc;
-use crate::command::Command;
 
 pub struct BotHandler {
-    bot: BotLock
+    bot: BotLock,
 }
 
 impl BotHandler {
     async fn new(bot: BotLock) -> Self {
-        Self {
-            bot
-        }
+        Self { bot }
     }
 }
 
@@ -41,27 +33,28 @@ impl EventHandler for BotHandler {
                     if content == "image/png" {
                         println!("Attachment found!");
                         let mut w = self.bot.write().await;
-                        w.latest_image.insert(_new_message.channel_id.clone(), attachment.url.clone());
+                        w.latest_image
+                            .insert(_new_message.channel_id.clone(), attachment.url.clone());
                     }
                 }
             }
 
-            let mut r = self.bot.write().await;
+            let mut r = self.bot.read().await;
             let default = "=".to_string();
             let prefix = r.prefix.get(&id).unwrap_or(&default);
             if content.starts_with(prefix) {
-                println!("Command dispatched");
                 let content = &content[prefix.len()..].to_string();
                 let split: Vec<String> = crate::process::get_args(content);
                 let void = "<void>".to_string();
 
                 let command = split.get(0).unwrap_or(&void);
-                println!("Processing command: {}", command);
 
                 let mut command = r.commands.get(command);
 
                 if let Some(command) = command {
-                    command.run(_ctx.http.clone(), self.bot.clone(), split, _new_message).await;
+                    command
+                        .run(_ctx.http.clone(), self.bot.clone(), split, _new_message)
+                        .await;
                 }
             }
         }
@@ -93,14 +86,17 @@ impl BotData {
             prefix: Default::default(),
             commands: Default::default(),
             latest_image: Default::default(),
-            client: Arc::new(reqwest::Client::builder().build().expect("http client build failure")),
+            client: Arc::new(
+                reqwest::Client::builder()
+                    .build()
+                    .expect("http client build failure"),
+            ),
             url_base: match env::var("KUBERNETES_SERVICE_HOST") {
-                Ok(_) => { // we are running in k8s
+                Ok(_) => {
+                    // we are running in k8s
                     "http://img-server:8080"
                 }
-                Err(_) => {
-                    "http://localhost:8080"
-                }
+                Err(_) => "http://localhost:8080",
             },
         }));
 
@@ -116,20 +112,16 @@ impl BotData {
         self.add_command(crate::caption::caption()).await;
     }
 
-    fn get_url(&self, url: &str) -> String {
+    pub fn get_url(&self, url: &str) -> String {
         String::from(self.url_base).add(url)
     }
 
-    async fn send_get(&self, url: &str) -> reqwest::Result<Response> {
+    pub async fn send_get(&self, url: &str) -> reqwest::Result<Response> {
         self.client.get(self.get_url(url)).send().await
     }
 
     async fn add_command(&mut self, mut command: Command) {
-        self.commands.insert(std::mem::take(&mut command.name), command);
-    }
-
-    async fn process_command(&self, _ctx: Context, _interaction: Interaction) -> std::result::Result<(), serenity::Error> {
-        Ok(())
+        self.commands.insert(command.name.to_string(), command);
     }
 }
 
@@ -141,11 +133,17 @@ pub struct Bot {
 impl Bot {
     pub async fn new() -> std::result::Result<Self, AnyError> {
         let token = std::env::var("IMGBOT_DISCORD_TOKEN").expect("discord token fetch err");
-        let id = std::env::var("IMGBOT_DISCORD_APPID").expect("discord appid fetch err").parse::<u64>()?;
+        let id = std::env::var("IMGBOT_DISCORD_APPID")
+            .expect("discord appid fetch err")
+            .parse::<u64>()?;
         let mut bot = BotData::new().await;
 
         Ok(Self {
-            bot_client: Client::builder(&token).application_id(id).event_handler(BotHandler::new(bot.clone()).await).await.expect("client build err"),
+            bot_client: Client::builder(&token)
+                .application_id(id)
+                .event_handler(BotHandler::new(bot.clone()).await)
+                .await
+                .expect("client build err"),
             lock: bot,
         })
     }
@@ -153,7 +151,6 @@ impl Bot {
     pub async fn start(&mut self) -> std::result::Result<(), SerenityError> {
         self.bot_client.start_autosharded().await
     }
-
 }
 
 #[macro_export]
