@@ -1,6 +1,6 @@
 use crate::command::Command;
 use err_context::AnyError;
-use reqwest::Response;
+use reqwest::{RequestBuilder, Response};
 use serenity::{
     async_trait,
     model::{gateway::Ready, interactions::Interaction, prelude::*},
@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::env;
 use std::ops::Add;
 use std::sync::Arc;
+use shared::CommandError;
 
 pub struct BotHandler {
     bot: BotLock,
@@ -118,6 +119,20 @@ impl BotData {
 
     pub async fn send_get(&self, url: &str) -> reqwest::Result<Response> {
         self.client.get(self.get_url(url)).send().await
+    }
+
+    pub async fn send_post(&self, url: &str) -> RequestBuilder {
+        self.client.post(self.get_url(url))
+    }
+
+    pub async fn check_health(&self) -> std::result::Result<(), AnyError> {
+        let result = self.send_get("/health").await;
+
+        if result.is_err() {
+            return Err(CommandError::UnhealthyServers.into());
+        }
+
+        Ok(())
     }
 
     async fn add_command(&mut self, mut command: Command) {

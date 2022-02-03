@@ -40,7 +40,7 @@ impl Command {
     }
 
     pub async fn run(&self, http: Arc<Http>, bot: BotLock, args: Vec<String>, msg: Message) {
-        let app = (self.parser)(self.name.to_string());
+        let app: clap::App = (self.parser)(self.name.to_string());
         let matches: clap::Result<clap::ArgMatches> = app.try_get_matches_from(args);
 
         match matches {
@@ -57,7 +57,7 @@ impl Command {
                     .await;
 
                 if let Err(e) = result {
-                    channel_id.say(http, e).await;
+                    channel_id.say(http, format!("```error: {}\n\nFor more information try --help```", e)).await;
                 }
             }
             Err(e) => match e.kind {
@@ -91,7 +91,7 @@ struct UnimplementedCommandRun;
 
 #[async_trait]
 impl CommandRun for UnimplementedCommandRun {
-    async fn run(&self, a: CommandRunArgs) -> Result<(), &'static str> {
+    async fn run(&self, a: CommandRunArgs) -> Result<(), AnyError> {
         unimplemented!()
     }
 }
@@ -141,5 +141,5 @@ impl CommandBuilder {
 
 #[async_trait]
 pub trait CommandRun: Send + Sync {
-    async fn run(&self, a: CommandRunArgs) -> Result<(), &'static str>;
+    async fn run(&self, a: CommandRunArgs) -> Result<(), AnyError>;
 }
