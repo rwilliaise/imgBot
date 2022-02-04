@@ -3,6 +3,7 @@ use clap::Parser;
 use err_context::AnyError;
 use serde_json::json;
 use serenity::async_trait;
+use serenity::http::LightMethod::Post;
 use shared::CommandError;
 
 struct CaptionsRun;
@@ -39,6 +40,8 @@ impl CommandRun for CaptionsRun {
             let request = r.send_post("/caption").await
                 .body(request.to_string())
                 .build()?;
+
+            let response = r.client.execute(request).await?;
         };
 
         Ok(())
