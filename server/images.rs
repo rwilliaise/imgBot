@@ -96,7 +96,7 @@ pub async fn process(
 
             if is_gif {
                 let fout = &mut BufWriter::new(File::create(&buf)?);
-                let mut encoder = gif::GifEncoder::new(fout);
+                let mut encoder = gif::GifEncoder::new_with_speed(fout, 20);
                 for frame in new_frames {
                     encoder.encode_frame(frame)?;
                 }
