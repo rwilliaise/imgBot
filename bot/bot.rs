@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::env;
 use std::ops::Add;
 use std::sync::Arc;
+use linkify::LinkFinder;
 
 pub struct BotHandler {
     bot: BotLock,
@@ -31,11 +32,25 @@ impl EventHandler for BotHandler {
         if let Some(id) = guild_id {
             for attachment in &_new_message.attachments {
                 if let Some(content) = &attachment.content_type {
-                    if content == "image/png" {
+                    if content.starts_with("image") {
                         let mut w = self.bot.write().await;
                         w.latest_image
                             .insert(_new_message.channel_id.clone(), attachment.url.clone());
                     }
+                }
+            }
+
+            let finder = LinkFinder::new();
+            let links: Vec<_> = finder.links(content).collect();
+
+            for link in links {
+                let string = link.as_str().to_string().clone();
+                if  string.ends_with(".gif") ||
+                    string.ends_with(".png") ||
+                    string.ends_with(".jpg")  {
+                    let mut w = self.bot.write().await;
+                    w.latest_image
+                        .insert(_new_message.channel_id.clone(), string.clone());
                 }
             }
 

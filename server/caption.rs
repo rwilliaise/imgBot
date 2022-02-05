@@ -1,15 +1,12 @@
-use std::borrow::Borrow;
-use std::env;
-use crate::AppState;
+use crate::{images, AppState};
 use actix_web::*;
-use err_context::AnyError;
-use image::{DynamicImage, ImageFormat, Rgb, Rgba};
-use serde::Deserialize;
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-use imageproc::drawing::draw_text_mut;
+use image::{DynamicImage, Rgba};
+use imageproc::drawing::{Canvas, draw_filled_rect_mut, draw_text_mut};
+use imageproc::rect::Rect;
 use rusttype::{Font, Scale};
-use shared::CommandError;
+use serde::Deserialize;
+use shared::ImageError;
+use conv::ValueInto;
 
 const CAPTION_FONT: &[u8] = include_bytes!("pack/caption.otf");
 
@@ -23,68 +20,72 @@ pub struct CaptionRequest {
 pub async fn caption(
     request: web::Json<CaptionRequest>,
     data: web::Data<AppState>,
-) -> Result<HttpResponse, error::Error> {
-    let response = data.client.get(&request.target_url).send().await;
+) -> Result<HttpResponse> {
+    let image = images::get_bytes(&data.client, &request.target_url).await;
 
-    if let Err(e) = response {
-        return Ok(HttpResponse::BadRequest().body(format!("Bad request. {}", e.to_string())));
+    if let Err(e) = image {
+        return Ok(HttpResponse::BadRequest().body(e.to_string()));
     }
 
-    let response = response.unwrap().bytes().await;
+    let image = image.unwrap();
 
-    if let Err(e) = response {
-        return Ok(HttpResponse::BadRequest().body(format!("Bad image. {}", e.to_string())));
+    let font = Vec::from(CAPTION_FONT);
+    let font = Font::try_from_vec(font).ok_or(ImageError::FontLoadFailure);
+
+    if let Err(e) = font {
+        return Ok(
+            HttpResponse::BadRequest().body(e.to_string())
+        );
     }
 
-    let try_image: std::result::Result<Vec<u8>, AnyError> = (|| {
-        let image = image::io::Reader::new(Cursor::new(response.unwrap()))
-            .with_guessed_format()?
-            .decode()?;
+    let font = font.unwrap();
+    let text = request.text.clone();
 
-        let font = Vec::from(CAPTION_FONT);
-        let font = Font::try_from_vec(font).ok_or(CommandError::GenericError("Font load fail"))?;
 
-        let scale = 24.8;
-        let scale = Scale {
-            x: scale * 2.0,
-            y: scale
-        };
+    let result = images::process(image, move |img| {
+        let img = img.into_rgba8();
+        let mut new_img = DynamicImage::new_rgba8(img.width(), img.height() + (img.width() / 5)).into_rgba8();
+        let scale = (img.width() / 13) as f32;
+        let scale = Scale { x: scale * 1.5, y: scale * 1.5 };
 
-        let text = request.text.as_str();
-        let tmp =  match env::var("KUBERNETES_SERVICE_HOST") {
-            Ok(_) => {
-                // we are running in k8s
-                "/tmp/"
-            }
-            Err(_) => "./tmp",
-        };
+        let rect = Rect::at(0, 0).of_size(img.width(), img.width() / 5);
+        let (size_x, size_y) = images::get_text_size(scale, &font, text.as_str());
+        let size_x: u32 = size_x.value_into()?;
+        let size_y: u32 = size_y.value_into()?;
 
-        let buf = PathBuf::from(format!("{}{}", tmp, uuid::Uuid::new_v4().to_string()));
+        draw_filled_rect_mut(&mut new_img, rect, Rgba([255u8, 255u8, 255u8, 255u8]));
+        draw_text_mut(
+            &mut new_img,
+            Rgba([0u8, 0u8, 0u8, 255u8]),
+            img.width() / 2 - size_x / 2,
+            img.width() / 10 - size_y / 2,
+            scale,
+            &font,
+            text.as_str(),
+        );
 
-        match image {
-            DynamicImage::ImageRgb8(mut e) => {
-                draw_text_mut(&mut e, Rgb([255u8, 255u8, 255u8]), 10, 10, scale, &font, text);
-                e.save_with_format(&buf, ImageFormat::Png)?;
-            },
-            DynamicImage::ImageRgba8(mut e) => {
-                draw_text_mut(&mut e, Rgba([255u8, 255u8, 255u8, 255u8]), 10, 10, scale, &font, text);
-                e.save_with_format(&buf, ImageFormat::Png)?;
-            },
-            _ => {
-                return Err(CommandError::GenericError("Unsupported format.").into());
-            }
-        };
+        let offset = img.width() / 5;
 
-        Ok(std::fs::read(&buf)?)
-    })();
+        for (x, y, pixel) in img.enumerate_pixels() {
+            new_img.draw_pixel(x, y + offset, *pixel);
+        }
 
-    if let Err(e) = try_image {
-        return Ok(HttpResponse::BadRequest().body(format!("Failed to load image. {}", e.to_string())));
+        Ok(DynamicImage::ImageRgba8(new_img))
+    })
+    .await;
+
+    if let Err(e) = result {
+        return Ok(
+            HttpResponse::BadRequest().body(format!("Failed to modify image. {}", e.to_string()))
+        );
     }
 
-
+    let (result, is_gif) = result.unwrap();
 
     Ok(HttpResponse::Ok()
-        .append_header(http::header::ContentType(mime::IMAGE_PNG))
-        .body(try_image.unwrap()))
+        .append_header(http::header::ContentType(match is_gif {
+            false => mime::IMAGE_PNG,
+            true => mime::IMAGE_GIF
+        }))
+        .body(result))
 }

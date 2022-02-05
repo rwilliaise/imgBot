@@ -1,6 +1,6 @@
+use err_context::AnyError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use err_context::AnyError;
 
 #[derive(Debug)]
 pub enum CommandError {
@@ -12,6 +12,7 @@ pub enum CommandError {
 
 impl Display for CommandError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("command error: ")?;
         match self {
             CommandError::GenericError(str) => f.write_str(str),
             CommandError::StringError(str) => f.write_str(str.as_str()),
@@ -33,3 +34,27 @@ impl Error for CommandError {
         }
     }
 }
+
+#[derive(Debug)]
+pub enum ImageError {
+    BadRequest(String),
+    BadImage(String),
+    ProcessingFailure(String),
+    FontLoadFailure,
+}
+
+impl Display for ImageError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("image error: ")?;
+        match self {
+            ImageError::BadImage(str) => f.write_str(format!("Bad image: {}", str).as_str()),
+            ImageError::BadRequest(str) => f.write_str(format!("Bad request: {}", str).as_str()),
+            ImageError::ProcessingFailure(str) => {
+                f.write_str(format!("Failed to modify image: {}", str).as_str())
+            }
+            ImageError::FontLoadFailure => f.write_str("Font load failure"),
+        }
+    }
+}
+
+impl Error for ImageError {}

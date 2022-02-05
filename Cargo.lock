@@ -976,6 +976,7 @@ version = "0.1.4"
 dependencies = [
  "clap",
  "err-context",
+ "linkify",
  "reqwest",
  "serde_json",
  "serenity",
@@ -989,6 +990,8 @@ version = "0.1.4"
 dependencies = [
  "actix-rt",
  "actix-web",
+ "bytes 1.1.0",
+ "conv",
  "err-context",
  "image",
  "imageproc",
@@ -1099,6 +1102,15 @@ name = "libc"
 version = "0.2.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "565dbd88872dbe4cc8a46e527f26483c1d1f7afa6b884a3bd6cd893d4f98da74"
+
+[[package]]
+name = "linkify"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccbcd666d915aa3ae3c3774999a9e20b2776a018309b8159d07df062b91f45e8"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "local-channel"

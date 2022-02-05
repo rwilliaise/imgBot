@@ -1,4 +1,5 @@
 mod caption;
+mod images;
 
 use actix_web::*;
 use std::io;

@@ -23,3 +23,5 @@ mime = "0.3.16"
 reqwest = "0.11.9"
 rusttype = "0.9.2"
 uuid = { version = "1.0.0-alpha.1", features = [ "v4" ] }
+bytes = "1.1.0"
+conv = "0.3.3"
