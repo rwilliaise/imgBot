@@ -1,12 +1,14 @@
 mod caption;
 
-use actix_web::http::StatusCode;
 use actix_web::*;
 use std::io;
 
+pub struct AppState {
+    client: reqwest::Client,
+}
 
 #[get("/health")]
-async fn health() -> Result<HttpResponse, Error> {
+async fn health() -> Result<HttpResponse, error::Error> {
     Ok(HttpResponse::Ok().body("200 OK"))
 }
 
@@ -19,6 +21,12 @@ async fn main() -> io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(health)
             .service(crate::caption::caption)
+            .app_data(web::Data::new(AppState {
+                client: reqwest::Client::builder()
+                    .user_agent("imgBot-server")
+                    .build()
+                    .unwrap(),
+            }))
     })
     .bind(host)?
     .run()

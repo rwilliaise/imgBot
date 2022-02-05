@@ -6,11 +6,11 @@ use serenity::{
     model::{gateway::Ready, interactions::Interaction, prelude::*},
     prelude::*,
 };
+use shared::CommandError;
 use std::collections::HashMap;
 use std::env;
 use std::ops::Add;
 use std::sync::Arc;
-use shared::CommandError;
 
 pub struct BotHandler {
     bot: BotLock,
@@ -32,7 +32,6 @@ impl EventHandler for BotHandler {
             for attachment in &_new_message.attachments {
                 if let Some(content) = &attachment.content_type {
                     if content == "image/png" {
-                        println!("Attachment found!");
                         let mut w = self.bot.write().await;
                         w.latest_image
                             .insert(_new_message.channel_id.clone(), attachment.url.clone());
@@ -40,7 +39,7 @@ impl EventHandler for BotHandler {
                 }
             }
 
-            let mut r = self.bot.read().await;
+            let r = self.bot.read().await;
             let default = "=".to_string();
             let prefix = r.prefix.get(&id).unwrap_or(&default);
             if content.starts_with(prefix) {
@@ -50,7 +49,7 @@ impl EventHandler for BotHandler {
 
                 let command = split.get(0).unwrap_or(&void);
 
-                let mut command = r.commands.get(command);
+                let command = r.commands.get(command);
 
                 if let Some(command) = command {
                     command
@@ -83,7 +82,7 @@ impl BotData {
     /// If environment variable `IMGBOT_DISCORD_TOKEN` is not set, `#new` will panic.
     /// If building the client fails, `#new` will panic.
     pub async fn new() -> BotLock {
-        let mut bot = Arc::new(RwLock::new(Self {
+        let bot = Arc::new(RwLock::new(Self {
             prefix: Default::default(),
             commands: Default::default(),
             latest_image: Default::default(),
@@ -121,7 +120,7 @@ impl BotData {
         self.client.get(self.get_url(url)).send().await
     }
 
-    pub async fn send_post(&self, url: &str) -> RequestBuilder {
+    pub async fn construct_post(&self, url: &str) -> RequestBuilder {
         self.client.post(self.get_url(url))
     }
 
@@ -135,7 +134,7 @@ impl BotData {
         Ok(())
     }
 
-    async fn add_command(&mut self, mut command: Command) {
+    async fn add_command(&mut self, command: Command) {
         self.commands.insert(command.name.to_string(), command);
     }
 }
@@ -151,7 +150,7 @@ impl Bot {
         let id = std::env::var("IMGBOT_DISCORD_APPID")
             .expect("discord appid fetch err")
             .parse::<u64>()?;
-        let mut bot = BotData::new().await;
+        let bot = BotData::new().await;
 
         Ok(Self {
             bot_client: Client::builder(&token)

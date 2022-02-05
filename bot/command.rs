@@ -1,10 +1,9 @@
 use crate::bot::BotLock;
 use clap::ErrorKind;
-use err_context::{AnyError, ErrorExt};
+use err_context::AnyError;
 use serenity::async_trait;
 use serenity::http::Http;
 use serenity::model::channel::Message;
-use std::fmt::Debug;
 use std::sync::Arc;
 
 pub type CommandAppCreate = Box<dyn Fn(String) -> clap::App<'static> + Send + Sync>;
@@ -57,7 +56,12 @@ impl Command {
                     .await;
 
                 if let Err(e) = result {
-                    channel_id.say(http, format!("```error: {}\n\nFor more information try --help```", e)).await;
+                    channel_id
+                        .say(
+                            http,
+                            format!("```error: {}\n\nFor more information try --help```", e),
+                        )
+                        .await;
                 }
             }
             Err(e) => match e.kind {
@@ -91,7 +95,7 @@ struct UnimplementedCommandRun;
 
 #[async_trait]
 impl CommandRun for UnimplementedCommandRun {
-    async fn run(&self, a: CommandRunArgs) -> Result<(), AnyError> {
+    async fn run(&self, _: CommandRunArgs) -> Result<(), AnyError> {
         unimplemented!()
     }
 }
@@ -106,7 +110,7 @@ impl CommandBuilder {
     }
 
     pub fn build(&mut self) -> Command {
-        let mut run = match self.run.take() {
+        let run = match self.run.take() {
             Some(r) => r,
             None => {
                 println!("No run provided for command!");
