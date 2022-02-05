@@ -10,10 +10,11 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
+COPY /shared/ ../shared
+
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY /bot/ .
-COPY /shared/ ../shared
 RUN cargo build --release --bin img_bot
 
 FROM debian:buster-slim
