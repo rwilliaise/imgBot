@@ -1,3 +1,6 @@
-/.git/
-/target/
-/.idea/
+.git
+target
+.idea
+appid
+deploy.sh
+token
