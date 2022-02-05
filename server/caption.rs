@@ -4,13 +4,12 @@ use image::{DynamicImage, Rgba};
 use imageproc::drawing::{Canvas, draw_filled_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
 use rusttype::{Font, Scale};
-use serde::Deserialize;
 use shared::ImageError;
 use conv::ValueInto;
 
 const CAPTION_FONT: &[u8] = include_bytes!("pack/caption.otf");
 
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 pub struct CaptionRequest {
     pub target_url: String,
     pub text: String,
