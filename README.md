@@ -2,6 +2,11 @@
 
 A discord bot focused on image manipulation and entertainment. Everything runs on K8s.
 
+## Local run
+Both the bot and server should run fine on local machines, just with environment vars set up.
+Make sure to set the working directory to a temporary folder to decrease junk files piling up.
+
+## K8s run
 First, before deploying anything, add bot token and appid as a secret:
 ```bash
 kubectl create secret generic imgbot-secret \
