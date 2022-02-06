@@ -17,7 +17,7 @@ async fn health() -> Result<HttpResponse, error::Error> {
 async fn main() -> io::Result<()> {
     let host = "0.0.0.0:8080";
 
-    HttpServer::new(|| {
+    let server = HttpServer::new(|| {
         App::new()
             .wrap(middleware::Logger::default())
             .service(health)
@@ -29,7 +29,8 @@ async fn main() -> io::Result<()> {
                     .unwrap(),
             }))
     })
-    .bind(host)?
-    .run()
-    .await
+    .bind(host)?;
+
+    println!("Starting server!");
+    server.run().await
 }

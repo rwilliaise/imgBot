@@ -1,19 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: img-server
+  name: imgserver
+  namespace: imgbot
+  labels:
+    name: imgserver
 spec:
   selector:
     matchLabels:
-      app: img-server
+      app: imgserver
   replicas: 5
   template:
     metadata:
       labels:
-        app: img-server
+        app: imgserver
     spec:
       containers:
-        - name: img-server
+        - name: imgserver
           image: ghcr.io/rwilliaise/imgbot-server:latest
           resources:
             limits:
