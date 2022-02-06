@@ -977,11 +977,14 @@ dependencies = [
  "clap",
  "err-context",
  "linkify",
+ "regex",
  "reqwest",
+ "serde",
  "serde_json",
  "serenity",
  "shared",
  "tokio",
+ "url",
 ]
 
 [[package]]

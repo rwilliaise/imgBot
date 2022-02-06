@@ -3,7 +3,7 @@ use err_context::AnyError;
 use reqwest::{RequestBuilder, Response};
 use serenity::{
     async_trait,
-    model::{gateway::Ready, interactions::Interaction, prelude::*},
+    model::{gateway::Ready, prelude::*},
     prelude::*,
 };
 use shared::CommandError;
@@ -12,6 +12,7 @@ use std::env;
 use std::ops::Add;
 use std::sync::Arc;
 use linkify::LinkFinder;
+use crate::tenor::TenorClient;
 
 pub struct BotHandler {
     bot: BotLock,
@@ -51,6 +52,16 @@ impl EventHandler for BotHandler {
                     let mut w = self.bot.write().await;
                     w.latest_image
                         .insert(_new_message.channel_id.clone(), string.clone());
+                } else {
+                    let url = url::Url::parse(link.as_str());
+
+                    if let Ok(url) = url {
+                        if url.host_str() == Some("tenor.com") {
+                            let mut w = self.bot.write().await;
+                            w.latest_image
+                                .insert(_new_message.channel_id.clone(), string.clone());
+                        }
+                    }
                 }
             }
 
@@ -85,8 +96,9 @@ pub type BotLock = Arc<RwLock<BotData>>;
 pub struct BotData {
     pub prefix: HashMap<GuildId, String>,
     pub latest_image: HashMap<ChannelId, String>,
-    pub client: Arc<reqwest::Client>,
-    commands: HashMap<String, Command>,
+    pub client: reqwest::Client,
+    pub commands: HashMap<String, Command>,
+    pub tenor_client: crate::tenor::TenorClient,
     url_base: &'static str,
 }
 
@@ -97,15 +109,16 @@ impl BotData {
     /// If environment variable `IMGBOT_DISCORD_TOKEN` is not set, `#new` will panic.
     /// If building the client fails, `#new` will panic.
     pub async fn new() -> BotLock {
+        let client = reqwest::Client::builder()
+            .build()
+            .expect("http client build failure");
+
         let bot = Arc::new(RwLock::new(Self {
             prefix: Default::default(),
             commands: Default::default(),
             latest_image: Default::default(),
-            client: Arc::new(
-                reqwest::Client::builder()
-                    .build()
-                    .expect("http client build failure"),
-            ),
+            tenor_client: TenorClient::new(client.clone()),
+            client,
             url_base: match env::var("KUBERNETES_SERVICE_HOST") {
                 Ok(_) => {
                     // we are running in k8s
@@ -124,7 +137,8 @@ impl BotData {
     }
 
     async fn add_commands(&mut self) {
-        self.add_command(crate::caption::caption()).await;
+        self.add_command(crate::command::caption::caption()).await;
+        // self.add_command(crate::command::help::help()).await;
     }
 
     pub fn get_url(&self, url: &str) -> String {

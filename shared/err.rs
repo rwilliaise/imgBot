@@ -58,3 +58,28 @@ impl Display for ImageError {
 }
 
 impl Error for ImageError {}
+
+#[derive(Debug)]
+pub enum TenorError {
+    Unavailable,
+    NoProcessed,
+    InvalidLink,
+    BadResponse(&'static str),
+    CannotParse(AnyError),
+}
+
+impl Display for TenorError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("tenor error: ")?;
+        match self {
+            TenorError::Unavailable => f.write_str("Tenor API is unavailable"),
+            TenorError::NoProcessed => f.write_str("Cannot parse link"),
+            TenorError::InvalidLink => f.write_str("Invalid tenor link"),
+            TenorError::BadResponse(str) => f.write_str(format!("Bad response: {}", str).as_str()),
+            TenorError::CannotParse(e) => f.write_str(format!("Cannot parse response: {:#?}", e).as_str()),
+        }
+    }
+}
+
+impl Error for TenorError {}
+

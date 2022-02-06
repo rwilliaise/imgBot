@@ -1,3 +1,6 @@
+pub mod caption;
+pub mod help;
+
 use crate::bot::BotLock;
 use clap::ErrorKind;
 use err_context::AnyError;

@@ -1,4 +1,4 @@
-use crate::{images, AppState};
+use crate::{images, AppState, GenericImageRequest};
 use actix_web::*;
 use image::{DynamicImage, Rgba};
 use imageproc::drawing::{Canvas, draw_filled_rect_mut, draw_text_mut};
@@ -9,15 +9,10 @@ use conv::ValueInto;
 
 const CAPTION_FONT: &[u8] = include_bytes!("pack/caption.otf");
 
-#[derive(serde::Deserialize)]
-pub struct CaptionRequest {
-    pub target_url: String,
-    pub text: String,
-}
 
 #[post("/caption")]
 pub async fn caption(
-    request: web::Json<CaptionRequest>,
+    request: web::Json<GenericImageRequest>,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse> {
     let image = images::get_bytes(&data.client, &request.target_url).await;

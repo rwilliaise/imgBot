@@ -2,7 +2,6 @@ use crate::bot::BotData;
 
 use crate::command::CommandRunArgs;
 use err_context::AnyError;
-use reqwest::header::{HeaderMap, CONTENT_TYPE};
 use reqwest::Response;
 use serde_json::json;
 use shared::CommandError;
@@ -27,11 +26,24 @@ pub async fn basic_img_job(
             None => {
                 return Err(CommandError::GenericError(
                     "No url provided. Try sending a new image, or specify a url with -u.",
-                ).into());
+                )
+                .into());
             }
         }
     } else {
         img_url = url.unwrap().to_string();
+    }
+
+    let url = url::Url::parse(img_url.as_str());
+
+    if let Ok(url) = url {
+        if url.host_str() == Some("tenor.com") {
+            let gif = r
+                .tenor_client
+                .get_gif(img_url)
+                .await?;
+            img_url = gif.url;
+        }
     }
 
     let request = json!({

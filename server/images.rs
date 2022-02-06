@@ -11,6 +11,7 @@ use std::env;
 use std::fs::File;
 use std::io::{BufWriter, Cursor, Write};
 use std::path::PathBuf;
+use std::rc::Rc;
 use image::codecs::gif::Repeat;
 
 pub async fn get_bytes(client: &reqwest::Client, target_url: &String) -> Result<Bytes, ImageError> {
@@ -95,12 +96,16 @@ pub async fn process(
             let buf = PathBuf::from(format!("{}{}", tmp, uuid::Uuid::new_v4().to_string()));
 
             if is_gif {
-                let fout = &mut BufWriter::new(File::create(&buf)?);
-                let mut encoder = gif::GifEncoder::new_with_speed(fout, 20);
+                let mut fout = Vec::new();
+                let mut encoder = gif::GifEncoder::new_with_speed(&mut fout, 20);
                 for frame in new_frames {
                     encoder.encode_frame(frame)?;
                 }
                 encoder.set_repeat(Repeat::Infinite)?;
+
+                drop(encoder);
+
+                return Ok((fout, true));
             } else if new_frames.len() > 0 {
                 if new_frames.len() > 1 {
                     println!("Residual frames detected");
@@ -113,13 +118,15 @@ pub async fn process(
                         return Err(ImageError::BadRequest("Unsupported format!".to_string()).into())
                     }
                 }
+
+                let bytes = std::fs::read(&buf)?;
+
+                std::fs::remove_file(&buf)?;
+
+                return Ok((bytes, false));
             }
 
-            let bytes = std::fs::read(&buf)?;
-
-            std::fs::remove_file(&buf)?;
-
-            Ok((bytes, is_gif))
+            Err(ImageError::ProcessingFailure("No frames created".to_string()).into())
         })
         .await;
 

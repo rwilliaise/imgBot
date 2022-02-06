@@ -1,7 +1,7 @@
 mod bot;
-mod caption;
 mod command;
 mod process;
+mod tenor;
 
 #[tokio::main]
 async fn main() {
