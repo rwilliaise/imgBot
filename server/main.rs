@@ -1,19 +1,14 @@
+use std::io;
+
+use actix_web::*;
+
 mod caption;
 mod severed;
 mod images;
 mod font;
 
-use actix_web::*;
-use std::io;
-
 pub struct AppState {
     client: reqwest::Client,
-}
-
-#[derive(serde::Deserialize)]
-pub struct GenericImageRequest {
-    pub target_url: String,
-    pub text: String,
 }
 
 #[get("/health")]
@@ -37,7 +32,7 @@ async fn main() -> io::Result<()> {
                     .unwrap(),
             }))
     })
-    .bind(host)?;
+        .bind(host)?;
 
     println!("Starting server!");
     server.run().await

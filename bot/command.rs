@@ -9,7 +9,7 @@ use serenity::http::Http;
 use serenity::model::channel::Message;
 use std::sync::Arc;
 
-pub type CommandAppCreate = Box<dyn Fn(String) -> clap::App<'static> + Send + Sync>;
+pub type CommandAppCreate = fn(String) -> clap::App<'static>;
 
 pub struct CommandRunArgs {
     pub http: Arc<Http>,
@@ -18,6 +18,7 @@ pub struct CommandRunArgs {
     pub msg: Message,
 }
 
+#[derive(Clone)]
 pub struct Command {
     pub name: &'static str,
     parser: CommandAppCreate,
@@ -62,25 +63,25 @@ impl Command {
                     channel_id
                         .say(
                             http,
-                            format!("```error: {}\n\nFor more information try --help```", e),
+                            format!("```{}\n\nFor more information try --help```", e),
                         )
-                        .await;
+                        .await.unwrap();
                 }
             }
             Err(e) => match e.kind {
                 ErrorKind::DisplayHelp => {
                     msg.channel_id
                         .say(http, format!("Help: ```{}```", e.to_string()))
-                        .await;
+                        .await.unwrap();
                 }
                 ErrorKind::DisplayVersion => {
-                    msg.channel_id.say(http, e.to_string()).await;
+                    msg.channel_id.say(http, e.to_string()).await.unwrap();
                 }
                 _ => {
                     if e.kind != ErrorKind::DisplayHelp && e.kind != ErrorKind::DisplayVersion {
                         msg.channel_id
                             .say(http, format!("```{}```", e.to_string()))
-                            .await;
+                            .await.unwrap();
                     }
                 }
             },
@@ -106,7 +107,7 @@ impl CommandRun for UnimplementedCommandRun {
 impl CommandBuilder {
     pub fn new(name: &'static str) -> Self {
         Self {
-            app: Some(Box::new(|n| clap::App::new(n))),
+            app: Some(|n| clap::App::new(n)),
             name,
             run: None,
         }
@@ -133,17 +134,17 @@ impl CommandBuilder {
     }
 
     pub fn parser<H: clap::Parser + 'static>(&mut self) -> &mut Self {
-        self.app = Some(Box::new(|n| <H as clap::IntoApp>::into_app().name(n)));
+        self.app = Some(|n| <H as clap::IntoApp>::into_app().name(n));
         self
     }
 
-    pub fn options(
-        &mut self,
-        f: impl Fn(String) -> clap::App<'static> + Send + Sync + 'static,
-    ) -> &mut Self {
-        self.app = Some(Box::new(f));
-        self
-    }
+    // pub fn options(
+    //     &mut self,
+    //     f: impl Fn(String) -> clap::App<'static> + Send + Sync + 'static,
+    // ) -> &mut Self {
+    //     self.app = Some(Box::new(f));
+    //     self
+    // }
 }
 
 #[async_trait]
