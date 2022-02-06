@@ -109,7 +109,7 @@ impl BotData {
             url_base: match env::var("KUBERNETES_SERVICE_HOST") {
                 Ok(_) => {
                     // we are running in k8s
-                    "http://img-server:8080"
+                    "http://imgserver:8080"
                 }
                 Err(_) => "http://localhost:8080",
             },

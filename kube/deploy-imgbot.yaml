@@ -6,7 +6,7 @@ spec:
   selector:
     matchLabels:
       app: img-bot
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
@@ -15,6 +15,13 @@ spec:
       containers:
         - name: img-bot
           image: ghcr.io/rwilliaise/imgbot:latest
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "500Mi"
+            requests:
+              cpu: "0.25"
+              memory: "50Mi"
           env:
             - name: IMGBOT_DISCORD_TOKEN
               valueFrom:

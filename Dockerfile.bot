@@ -23,6 +23,7 @@ WORKDIR app
 COPY --from=builder /app/target/release/img_bot /usr/local/bin
 
 RUN USER=root apt-get update
-RUN USER=root yes | apt-get install build-essential libapr1-dev libssl-dev
+RUN USER=root yes | apt-get install libssl-dev
+RUN USER=ROOT apt-get clean && apt-get autoclean && apt-get autoremove
 
 CMD ["/usr/local/bin/img_bot"]

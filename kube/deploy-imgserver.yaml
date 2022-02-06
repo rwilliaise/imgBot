@@ -15,5 +15,12 @@ spec:
       containers:
         - name: img-server
           image: ghcr.io/rwilliaise/imgbot-server:latest
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "500Mi"
+            requests:
+              cpu: "0.25"
+              memory: "50Mi"
           ports:
             - containerPort: 8080
