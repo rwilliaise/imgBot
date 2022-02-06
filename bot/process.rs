@@ -1,17 +1,15 @@
-use crate::bot::BotData;
-
 use crate::command::CommandRunArgs;
 use err_context::AnyError;
 use reqwest::Response;
 use serde_json::json;
 use shared::CommandError;
-use tokio::sync::RwLockReadGuard;
 
 pub async fn basic_img_job(
-    r: &RwLockReadGuard<'_, BotData>,
     a: &CommandRunArgs,
     request_url: &str,
 ) -> Result<Response, AnyError> {
+    let mut r = a.bot.write().await;
+
     r.check_health().await?;
 
     let mut img_url: String;
@@ -35,12 +33,11 @@ pub async fn basic_img_job(
     }
 
     let url = url::Url::parse(img_url.as_str());
-
     if let Ok(url) = url {
         if url.host_str() == Some("tenor.com") {
             let gif = r
                 .tenor_client
-                .get_gif(img_url)
+                .fetch(img_url)
                 .await?;
             img_url = gif.url;
         }

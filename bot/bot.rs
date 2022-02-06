@@ -78,7 +78,11 @@ impl EventHandler for BotHandler {
                 let command = r.commands.get(command);
 
                 if let Some(command) = command {
-                    command
+                    let clone = command.clone();
+
+                    drop(r);
+
+                    clone
                         .run(_ctx.http.clone(), self.bot.clone(), split, _new_message)
                         .await;
                 }
@@ -138,7 +142,7 @@ impl BotData {
 
     async fn add_commands(&mut self) {
         self.add_command(crate::command::caption::caption()).await;
-        // self.add_command(crate::command::help::help()).await;
+        self.add_command(crate::command::help::help()).await;
     }
 
     pub fn get_url(&self, url: &str) -> String {
@@ -169,7 +173,6 @@ impl BotData {
 }
 
 pub struct Bot {
-    lock: BotLock,
     bot_client: Client,
 }
 
@@ -184,10 +187,9 @@ impl Bot {
         Ok(Self {
             bot_client: Client::builder(&token)
                 .application_id(id)
-                .event_handler(BotHandler::new(bot.clone()).await)
+                .event_handler(BotHandler::new(bot).await)
                 .await
-                .expect("client build err"),
-            lock: bot,
+                .expect("client build err")
         })
     }
 

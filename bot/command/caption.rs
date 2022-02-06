@@ -16,10 +16,11 @@ struct CaptionsRun;
 impl CommandRun for CaptionsRun {
     async fn run(&self, a: CommandRunArgs) -> Result<(), AnyError> {
         {
-            let r = a.bot.read().await;
-            let mut msg = a.msg.channel_id.say(a.http.clone(), "1/2 🟩⬛ Requesting").await?;
+            let mut msg = a.msg.channel_id.say(a.http.clone(), "1/3 🟩⬛⬛ Requesting").await?;
 
-            let response = basic_img_job(&r, &a, "/caption").await;
+            let response = basic_img_job(&a, "/caption").await;
+
+            msg.edit(a.http.clone(), |m| m.content("2/3 🟩🟩⬛ Processing")).await?;
 
             if let Err(e) = response {
                 return Err(CommandError::SourcedError(
@@ -47,7 +48,7 @@ impl CommandRun for CaptionsRun {
 
             let bytes = response.bytes().await?;
 
-            msg.edit(a.http.clone(), |m| m.content("2/2 🟩🟩 Uploading")).await?;
+            msg.edit(a.http.clone(), |m| m.content("3/3 🟩🟩🟩 Uploading")).await?;
 
             a.http
                 .send_files(
@@ -65,12 +66,12 @@ impl CommandRun for CaptionsRun {
                     }],
                     serde_json::Map::default(),
                 )
-                .await;
+                .await?;
 
             tokio::spawn(async move {
                 tokio::time::sleep(Duration::from_millis(1000)).await;
-                msg.delete(a.http.clone()).await;
-            }).await;
+                msg.delete(a.http.clone()).await.unwrap();
+            }).await?;
 
         };
 

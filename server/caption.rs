@@ -1,11 +1,12 @@
-use crate::{images, AppState, GenericImageRequest};
 use actix_web::*;
+use conv::ValueInto;
 use image::{DynamicImage, Rgba};
 use imageproc::drawing::{Canvas, draw_filled_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
 use rusttype::{Font, Scale};
-use shared::ImageError;
-use conv::ValueInto;
+
+use crate::{AppState, images};
+use crate::images::GenericImageRequest;
 
 const CAPTION_FONT: &[u8] = include_bytes!("pack/caption.otf");
 
@@ -24,17 +25,9 @@ pub async fn caption(
     let image = image.unwrap();
 
     let font = Vec::from(CAPTION_FONT);
-    let font = Font::try_from_vec(font).ok_or(ImageError::FontLoadFailure);
+    let font = Font::try_from_vec(font).unwrap();
 
-    if let Err(e) = font {
-        return Ok(
-            HttpResponse::BadRequest().body(e.to_string())
-        );
-    }
-
-    let font = font.unwrap();
     let text = request.text.clone();
-
 
     let result = images::process(image, move |img| {
         let img = img.into_rgba8();
