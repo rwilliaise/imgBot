@@ -1,9 +1,9 @@
 use std::cmp::max;
 use std::io::Cursor;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
-use std::{env, thread};
+use std::env;
 use std::collections::HashMap;
 
 use actix_web::error::BlockingError;
@@ -11,7 +11,7 @@ use actix_web::web;
 use bytes::Bytes;
 use err_context::AnyError;
 use image::codecs::gif;
-use image::{AnimationDecoder, DynamicImage, Frame, ImageFormat, RgbaImage};
+use image::{AnimationDecoder, DynamicImage, Frame, ImageFormat};
 use image::codecs::gif::Repeat;
 use rusttype::{point, Font, Scale};
 
@@ -154,8 +154,8 @@ pub async fn process(
         if is_gif {
             let mut out = Vec::new();
             let mut encoder = gif::GifEncoder::new_with_speed(&mut out, 20);
-            for frame in new_frames {
-                encoder.encode_frame(frame)?;
+            for (_, frame) in new_frames.iter() {
+                encoder.encode_frame(frame.clone())?;
             }
             encoder.set_repeat(Repeat::Infinite)?;
 
@@ -167,7 +167,7 @@ pub async fn process(
                 println!("Residual frames detected");
             }
             let image = new_frames.get(&0).unwrap();
-            let image = DynamicImage::ImageRgba8(image.original.clone());
+            let image = DynamicImage::ImageRgba8(image.buffer().clone());
             match image {
                 DynamicImage::ImageRgba8(e) => e.save_with_format(&buf, ImageFormat::Png)?,
                 _ => {

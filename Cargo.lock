@@ -996,7 +996,7 @@ dependencies = [
 
 [[package]]
 name = "img_bot"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "clap",
  "err-context",
@@ -1013,7 +1013,7 @@ dependencies = [
 
 [[package]]
 name = "img_server"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "actix-rt",
  "actix-web",
