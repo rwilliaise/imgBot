@@ -15,6 +15,7 @@ use image::{AnimationDecoder, DynamicImage, Frame, ImageFormat};
 use image::codecs::gif::Repeat;
 use rusttype::{point, Font, Scale};
 
+use itertools::Itertools;
 use shared::ImageError;
 
 #[derive(serde::Deserialize)]
