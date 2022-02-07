@@ -12,7 +12,7 @@ First, before deploying anything, add the imgbot namespace for convenience:
 kubectl apply -f kube/namespace-imgbot.yaml
 ```
 
-First, before deploying anything, add bot token and appid as a secret:
+Before anything else, add bot token and appid as a secret:
 ```bash
 kubectl create secret generic imgbot-secret \
   --namespace=imgbot \
@@ -20,18 +20,23 @@ kubectl create secret generic imgbot-secret \
   --from-literal=appid='INSERT APPID HERE'
 ```
 
-Now, deploy all image servers:
+Optionally, feel free to add a Tenor API key:
 ```bash
-kubectl apply -f kube/deploy-imgserver.yaml
-kubectl rollout status --namespace=imgbot deployment/img-server
-
-kubectl apply -f kube/service-imgserver.yaml
+kubectl create secret generic imgbot-secret-tenor \
+  --namespace=imgbot \
+  --from-literal=apikey='INSERT TENOR API KEY' 
 ```
 
-Then, deploy the main bot instances:
+Now, apply the main imgbot.yaml file.
 ```bash
-kubectl apply -f kube/deploy-imgbot.yaml
-kubectl rollout status --namespace=imgbot  deployment/img-bot
+
+kubectl apply -f kube/imgbot.yaml
+```
+
+Then, rollout both deployments:
+```bash
+kubectl rollout status --namespace=imgbot deployment/imgserver
+kubectl rollout status --namespace=imgbot deployment/imgbot
 ```
 
 To check if everything is running correctly:
