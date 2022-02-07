@@ -154,7 +154,7 @@ pub async fn process(
         if is_gif {
             let mut out = Vec::new();
             let mut encoder = gif::GifEncoder::new_with_speed(&mut out, 20);
-            for (_, frame) in new_frames.iter() {
+            for (_, frame) in new_frames.iter().sorted_by_key(|k| k.0) {
                 encoder.encode_frame(frame.clone())?;
             }
             encoder.set_repeat(Repeat::Infinite)?;

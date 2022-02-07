@@ -22,9 +22,11 @@ spec:
       labels:
         app: imgserver
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: imgserver
           image: ghcr.io/rwilliaise/imgbot-server:latest
+          imagePullPolicy: "Always"
           resources:
             limits:
               cpu: "0.5"
@@ -71,9 +73,11 @@ spec:
       labels:
         app: imgbot
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: imgbot
           image: ghcr.io/rwilliaise/imgbot:latest
+          imagePullPolicy: "Always"
           resources:
             limits:
               cpu: "0.5"
