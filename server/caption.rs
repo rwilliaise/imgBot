@@ -32,8 +32,15 @@ pub async fn caption(
     let result = images::process(image, move |img| {
         let img = img.into_rgba8();
         let mut new_img = DynamicImage::new_rgba8(img.width(), img.height() + (img.width() / 5)).into_rgba8();
+
+
         let scale = (img.width() / 13) as f32;
         let scale = Scale { x: scale * 1.5, y: scale * 1.5 };
+
+        dbg!(font.units_per_em());
+
+        // let (w) = images::get_text_size(scale, &font, "W");
+        //
 
         let rect = Rect::at(0, 0).of_size(img.width(), img.width() / 5);
         let (size_x, size_y) = images::get_text_size(scale, &font, text.as_str());

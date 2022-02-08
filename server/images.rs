@@ -60,6 +60,10 @@ pub fn get_text_size(scale: Scale, font: &Font, text: &str) -> (i32, i32) {
     (w, h)
 }
 
+pub fn get_line_height(scale: Scale, font: &Font) -> f32 {
+    font.v_metrics(scale).line_gap
+}
+
 pub async fn process(
     bytes: Bytes,
     f: impl Fn(DynamicImage) -> Result<DynamicImage, AnyError> + Send + Sync + Clone + 'static,
