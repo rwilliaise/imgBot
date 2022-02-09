@@ -23,6 +23,8 @@ impl CommandRun for CaptionsRun {
             msg.edit(a.http.clone(), |m| m.content("2/3 🟩🟩⬛ Processing")).await?;
 
             if let Err(e) = response {
+                crate::process::delay_delete(a.http, msg, Duration::from_millis(1000)).await;
+
                 return Err(CommandError::SourcedError(
                     "Failed caption request.\n\n",
                     e,
@@ -35,6 +37,8 @@ impl CommandRun for CaptionsRun {
             match response.error_for_status_ref() {
                 Ok(_) => (),
                 Err(_) => {
+                    crate::process::delay_delete(a.http, msg, Duration::from_millis(1000)).await;
+
                     let text = response.text().await?;
                     return Err(CommandError::StringError(format!(
                         "Image server contact failure.\n\n{}",

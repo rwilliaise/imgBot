@@ -8,6 +8,7 @@ use serenity::async_trait;
 use serenity::http::Http;
 use serenity::model::channel::Message;
 use std::sync::Arc;
+use std::time::Duration;
 
 pub type CommandAppCreate = fn(String) -> clap::App<'static>;
 
@@ -79,9 +80,11 @@ impl Command {
                 }
                 _ => {
                     if e.kind != ErrorKind::DisplayHelp && e.kind != ErrorKind::DisplayVersion {
-                        msg.channel_id
-                            .say(http, format!("```{}```", e.to_string()))
+                        let new_msg = msg.channel_id
+                            .say(http.clone(), format!("```{}```", e.to_string()))
                             .await.unwrap();
+
+                        crate::process::delay_delete(http, new_msg, Duration::from_millis(1000)).await;
                     }
                 }
             },

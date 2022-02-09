@@ -1,7 +1,11 @@
+use std::sync::Arc;
+use std::time::Duration;
 use crate::command::CommandRunArgs;
 use err_context::AnyError;
 use reqwest::Response;
 use serde_json::json;
+use serenity::http::Http;
+use serenity::model::channel::Message;
 use shared::CommandError;
 
 pub async fn basic_img_job(
@@ -60,6 +64,13 @@ pub async fn basic_img_job(
     }
 
     return Ok(out.unwrap());
+}
+
+pub async fn delay_delete(http: Arc<Http>, msg: Message, duration: Duration) {
+    tokio::spawn(async move {
+        tokio::time::sleep(duration).await;
+        msg.delete(http.clone()).await.unwrap();
+    }).await.expect("delayed delete failure");
 }
 
 pub fn get_args(str: &String) -> Vec<String> {

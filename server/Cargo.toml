@@ -28,3 +28,7 @@ conv = "0.3.3"
 futures = "0.3.21"
 tokio = "1.16.1"
 itertools = "0.10.3"
+textwrap = { version = "0.14.2", features = ["smawk", "unicode-linebreak", "unicode-width"] }
+smawk = "0.3.1"
+unicode-linebreak = "0.1.2"
+unicode-width = "0.1.9"

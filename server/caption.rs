@@ -6,6 +6,7 @@ use imageproc::rect::Rect;
 use rusttype::{Font, Scale};
 
 use crate::{AppState, images};
+use crate::font::{DrawableFont, HorizontalGravity, VerticalGravity};
 use crate::images::GenericImageRequest;
 
 const CAPTION_FONT: &[u8] = include_bytes!("pack/caption.otf");
@@ -27,38 +28,31 @@ pub async fn caption(
     let font = Vec::from(CAPTION_FONT);
     let font = Font::try_from_vec(font).unwrap();
 
+    let mut font = DrawableFont::new(font);
+
     let text = request.text.clone();
 
     let result = images::process(image, move |img| {
         let img = img.into_rgba8();
-        let mut new_img = DynamicImage::new_rgba8(img.width(), img.height() + (img.width() / 5)).into_rgba8();
-
 
         let scale = (img.width() / 13) as f32;
         let scale = Scale { x: scale * 1.5, y: scale * 1.5 };
 
-        dbg!(font.units_per_em());
+        font.text(text)
+            .scale(scale)
+            .color(Rgba([0u8, 0u8, 0u8, 255u8]))
+            .extents(img.width(), img.height())
+            .gravity(HorizontalGravity::CenterGravity, VerticalGravity::TopGravity);
 
-        // let (w) = images::get_text_size(scale, &font, "W");
-        //
+        let (_, h) = font.get_text_size();
 
-        let rect = Rect::at(0, 0).of_size(img.width(), img.width() / 5);
-        let (size_x, size_y) = images::get_text_size(scale, &font, text.as_str());
-        let size_x: u32 = size_x.value_into()?;
-        let size_y: u32 = size_y.value_into()?;
+        let offset: f32 = h + img.width() / 13;
+        let mut new_img = DynamicImage::new_rgba8(img.width(), img.height() + offset).into_rgba8();
+        let rect = Rect::at(0, 0).of_size(img.width(), offset as u32);
+        font.extents(img.width(), offset as u32);
 
         draw_filled_rect_mut(&mut new_img, rect, Rgba([255u8, 255u8, 255u8, 255u8]));
-        draw_text_mut(
-            &mut new_img,
-            Rgba([0u8, 0u8, 0u8, 255u8]),
-            img.width() / 2 - size_x / 2,
-            img.width() / 10 - size_y / 2,
-            scale,
-            &font,
-            text.as_str(),
-        );
-
-        let offset = img.width() / 5;
+        font.flush(&mut new_img, 0, 0);
 
         for (x, y, pixel) in img.enumerate_pixels() {
             new_img.draw_pixel(x, y + offset, *pixel);
