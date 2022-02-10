@@ -3,9 +3,9 @@ use std::io;
 use actix_web::*;
 
 mod caption;
-mod severed;
-mod images;
 mod font;
+mod images;
+mod severed;
 
 pub struct AppState {
     client: reqwest::Client,
@@ -32,7 +32,7 @@ async fn main() -> io::Result<()> {
                     .unwrap(),
             }))
     })
-        .bind(host)?;
+    .bind(host)?;
 
     println!("Starting server!");
     server.run().await

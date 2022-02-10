@@ -1,18 +1,16 @@
-
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct MediaObject {
     pub preview: String,
     pub url: String,
     pub dims: Vec<u32>,
-    pub size: u32
+    pub size: u32,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
-pub struct GifMedia { // minimal
+pub struct GifMedia {
+    // minimal
     #[serde(default)]
     pub gif: Option<MediaObject>,
-    #[serde(default)]
-    pub mediumgif: Option<MediaObject>,
     #[serde(default)]
     pub tinygif: Option<MediaObject>,
     #[serde(default)]
@@ -29,11 +27,11 @@ pub struct GifObject {
     pub title: String,
     pub itemurl: String,
     pub hascaption: bool,
-    pub url: String
+    pub url: String,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct GifsResponse {
     pub next: String,
-    pub results: Vec<GifObject>
+    pub results: Vec<GifObject>,
 }

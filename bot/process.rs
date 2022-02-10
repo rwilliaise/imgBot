@@ -1,5 +1,3 @@
-use std::sync::Arc;
-use std::time::Duration;
 use crate::command::CommandRunArgs;
 use err_context::AnyError;
 use reqwest::Response;
@@ -7,11 +5,10 @@ use serde_json::json;
 use serenity::http::Http;
 use serenity::model::channel::Message;
 use shared::CommandError;
+use std::sync::Arc;
+use std::time::Duration;
 
-pub async fn basic_img_job(
-    a: &CommandRunArgs,
-    request_url: &str,
-) -> Result<Response, AnyError> {
+pub async fn basic_img_job(a: &CommandRunArgs, request_url: &str) -> Result<Response, AnyError> {
     let mut r = a.bot.write().await;
 
     r.check_health().await?;
@@ -39,10 +36,7 @@ pub async fn basic_img_job(
     let url = url::Url::parse(img_url.as_str());
     if let Ok(url) = url {
         if url.host_str() == Some("tenor.com") {
-            let gif = r
-                .tenor_client
-                .fetch(img_url)
-                .await?;
+            let gif = r.tenor_client.fetch(img_url).await?;
             img_url = gif.url;
         }
     }
@@ -70,7 +64,9 @@ pub async fn delay_delete(http: Arc<Http>, msg: Message, duration: Duration) {
     tokio::spawn(async move {
         tokio::time::sleep(duration).await;
         msg.delete(http.clone()).await.unwrap();
-    }).await.expect("delayed delete failure");
+    })
+    .await
+    .expect("delayed delete failure");
 }
 
 pub fn get_args(str: &String) -> Vec<String> {

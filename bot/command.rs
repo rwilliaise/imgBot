@@ -45,11 +45,23 @@ impl Command {
 
     pub async fn run(&self, http: Arc<Http>, bot: BotLock, args: Vec<String>, msg: Message) {
         let app: clap::App = (self.parser)(self.name.to_string());
+        let has_verbose = app
+            .get_arguments()
+            .filter(|a| a.get_name() == "verbose")
+            .collect::<Vec<_>>()
+            .len()
+            > 0;
         let matches: clap::Result<clap::ArgMatches> = app.try_get_matches_from(args);
 
         match matches {
             Ok(matches) => {
                 let channel_id = msg.channel_id.clone();
+
+                let verbose = match has_verbose {
+                    true => matches.is_present("verbose"),
+                    false => false,
+                };
+
                 let result = self
                     .runnable
                     .run(CommandRunArgs {
@@ -61,30 +73,48 @@ impl Command {
                     .await;
 
                 if let Err(e) = result {
-                    channel_id
-                        .say(
-                            http,
-                            format!("```{}\n\nFor more information try --help```", e),
-                        )
-                        .await.unwrap();
+                    if verbose {
+                        channel_id
+                            .say(
+                                http,
+                                format!(
+                                    "```{}\n\n{:#?}\n\nFor more information try --help```",
+                                    e, e
+                                ),
+                            )
+                            .await
+                            .unwrap();
+                    } else {
+                        channel_id
+                            .say(
+                                http,
+                                format!("```{}\n\nFor more information try --help```", e),
+                            )
+                            .await
+                            .unwrap();
+                    }
                 }
             }
             Err(e) => match e.kind {
                 ErrorKind::DisplayHelp => {
                     msg.channel_id
                         .say(http, format!("Help: ```{}```", e.to_string()))
-                        .await.unwrap();
+                        .await
+                        .unwrap();
                 }
                 ErrorKind::DisplayVersion => {
                     msg.channel_id.say(http, e.to_string()).await.unwrap();
                 }
                 _ => {
                     if e.kind != ErrorKind::DisplayHelp && e.kind != ErrorKind::DisplayVersion {
-                        let new_msg = msg.channel_id
+                        let new_msg = msg
+                            .channel_id
                             .say(http.clone(), format!("```{}```", e.to_string()))
-                            .await.unwrap();
+                            .await
+                            .unwrap();
 
-                        crate::process::delay_delete(http, new_msg, Duration::from_millis(1000)).await;
+                        crate::process::delay_delete(http, new_msg, Duration::from_millis(1000))
+                            .await;
                     }
                 }
             },

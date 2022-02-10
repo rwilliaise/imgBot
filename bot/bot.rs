@@ -1,5 +1,7 @@
 use crate::command::Command;
+use crate::tenor::TenorClient;
 use err_context::AnyError;
+use linkify::LinkFinder;
 use reqwest::{RequestBuilder, Response};
 use serenity::{
     async_trait,
@@ -11,8 +13,6 @@ use std::collections::HashMap;
 use std::env;
 use std::ops::Add;
 use std::sync::Arc;
-use linkify::LinkFinder;
-use crate::tenor::TenorClient;
 
 pub struct BotHandler {
     bot: BotLock,
@@ -46,9 +46,8 @@ impl EventHandler for BotHandler {
 
             for link in links {
                 let string = link.as_str().to_string().clone();
-                if  string.ends_with(".gif") ||
-                    string.ends_with(".png") ||
-                    string.ends_with(".jpg")  {
+                if string.ends_with(".gif") || string.ends_with(".png") || string.ends_with(".jpg")
+                {
                     let mut w = self.bot.write().await;
                     w.latest_image
                         .insert(_new_message.channel_id.clone(), string.clone());
@@ -189,7 +188,7 @@ impl Bot {
                 .application_id(id)
                 .event_handler(BotHandler::new(bot).await)
                 .await
-                .expect("client build err")
+                .expect("client build err"),
         })
     }
 

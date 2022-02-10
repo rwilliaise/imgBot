@@ -48,7 +48,7 @@ impl TenorClient {
         }
 
         let request = format!(
-            "https://g.tenor.com/v1/gifs?ids={}&key={}&limit=1",
+            "https://g.tenor.com/v1/gifs?ids={}&key={}&media_filter=minimal&limit=1",
             matched.unwrap().as_str(),
             self.key.clone().unwrap()
         );
@@ -78,12 +78,10 @@ impl TenorClient {
         }
 
         let response = response.media.get(0).unwrap();
-        let out = response.mediumgif.clone().unwrap_or(
-            response
-                .gif
-                .clone()
-                .ok_or(TenorError::BadResponse("No gif"))?,
-        );
+        let out = response
+            .gif
+            .clone()
+            .ok_or(TenorError::BadResponse("No gif"))?;
         self.cache.insert(url, out.clone());
 
         Ok(out)

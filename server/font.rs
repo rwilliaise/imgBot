@@ -1,11 +1,9 @@
-use std::cmp::max;
-use conv::ValueInto;
+use crate::images;
 use err_context::AnyError;
 use image::Rgba;
-use imageproc::drawing::{Canvas, draw_text_mut};
+use imageproc::drawing::{draw_text_mut, Canvas};
 use rusttype::{Font, Scale};
-use textwrap::word_separators::{UnicodeBreakProperties, WordSeparator};
-use crate::images;
+use textwrap::Options;
 
 #[derive(Clone)]
 pub enum HorizontalGravity {
@@ -22,8 +20,8 @@ pub enum VerticalGravity {
 }
 
 #[derive(Clone)]
-pub struct DrawableFont {
-    inner: Font<'static>,
+pub struct DrawableFont<'a> {
+    inner: Font<'a>,
     pixel: Rgba<u8>,
     string: String,
     scale: Scale,
@@ -33,8 +31,8 @@ pub struct DrawableFont {
     height: u32,
 }
 
-impl DrawableFont {
-    pub fn new(font: Font) -> Self {
+impl<'a> DrawableFont<'a> {
+    pub fn new(font: Font<'a>) -> Self {
         Self {
             inner: font.clone(),
             string: "".to_string(),
@@ -57,7 +55,7 @@ impl DrawableFont {
         self
     }
 
-    pub fn color(&mut self, pixel: <Rgba<u8> as Trait>::Pixel) -> &mut Self {
+    pub fn color(&mut self, pixel: Rgba<u8>) -> &mut Self {
         self.pixel = pixel;
         self
     }
@@ -74,78 +72,89 @@ impl DrawableFont {
         self
     }
 
-    pub fn get_text_size(&self) -> (f32, f32) {
+    pub fn get_text_size(&self) -> (u32, u32) {
         let text = self.string.clone();
         let scale = self.scale.clone();
-        let width = self.width.clone();
+        let width: f32 = self.width.clone() as f32;
 
-        let (w, _) = images::get_text_size(scale, &self.inner, "W");
-        let cols = (width / w) - 1;
+        let (w, _) = images::get_text_size(scale, &self.inner, "o");
+        let cols: f32 = width / w as f32;
 
-        let wrapped = textwrap::wrap(text.as_str(), cols);
+        let wrapped = textwrap::wrap(text.as_str(), cols as usize);
         let metrics = self.inner.v_metrics(scale);
 
-        let mut w = 0;
-        let mut h = 0;
+        let mut w: f32 = 0.;
+        let mut h: f32 = 0.;
         for wrap in wrapped {
             let (text_width, _) = images::get_text_size(scale, &self.inner, &*wrap.clone());
-            w = max(w, text_width.abs() as u32);
+            w = w.max(text_width.abs() as f32);
             h = h - metrics.descent + metrics.line_gap + metrics.ascent;
         }
 
-        (w, h)
+        (w as u32, h as u32)
     }
 
-    pub fn flush<C>(&mut self, img: &mut C, offset_x: i32, offset_y: i32) -> Result<(), AnyError>
+    pub fn flush<C>(&mut self, img: &mut C, offset_x: f32, offset_y: f32) -> Result<(), AnyError>
     where
         C: Canvas<Pixel = Rgba<u8>>,
     {
+        let (_, total_height) = self.get_text_size();
+        let total_height = total_height as f32;
+
         let text = std::mem::replace(&mut self.string, "".to_string());
         let color = std::mem::replace(&mut self.pixel, Rgba([0u8, 0u8, 0u8, 0u8]));
         let scale = std::mem::replace(&mut self.scale, Scale { x: 1., y: 1. });
 
-        let width = std::mem::take(&mut self.width);
-        let height = std::mem::take(&mut self.height);
+        let hor_gravity = std::mem::replace(&mut self.hor_gravity, HorizontalGravity::LeftGravity);
+        let ver_gravity = std::mem::replace(&mut self.ver_gravity, VerticalGravity::TopGravity);
 
-        let (w) = images::get_text_size(scale, &self.inner, "W");
-        let cols = (width / w) - 1;
+        let width = std::mem::take(&mut self.width) as f32;
+        let height = std::mem::take(&mut self.height) as f32;
 
-        let wrapped = textwrap::wrap(text.as_str(), cols);
+        let (w, _) = images::get_text_size(scale, &self.inner, "o");
+        let w = w as f32;
+        let cols = width / w;
+
+        let wrapped = textwrap::wrap(
+            text.as_str(),
+            Options::new(cols as usize).wrap_algorithm(textwrap::wrap_algorithms::OptimalFit),
+        );
         let metrics = self.inner.v_metrics(scale);
+
+        dbg!(&total_height);
+        dbg!(&height);
 
         let mut wrap_y: f32 = 0.;
         for wrap in wrapped {
-            let (text_width, text_height) = images::get_text_size(scale, &self.inner, &*wrap.clone());
-
+            let (text_width, _) = images::get_text_size(scale, &self.inner, &*wrap.clone());
+            let text_width = text_width as f32;
             let offset_y = offset_y + wrap_y;
 
-            wrap_y = wrap_y + metrics.descent - metrics.line_gap - metrics.ascent;
+            wrap_y = wrap_y - metrics.descent + metrics.line_gap + metrics.ascent;
 
-            let x = match std::mem::replace(&mut self.hor_gravity, HorizontalGravity::LeftGravity) {
-                HorizontalGravity::LeftGravity => {
-                    offset_x
-                }
-                HorizontalGravity::RightGravity => {
-                    offset_x + width - text_width
-                }
-                HorizontalGravity::CenterGravity => {
-                    offset_x + width / 2 - text_width / 2
-                }
+            dbg!(&wrap_y);
+
+            let x = match hor_gravity {
+                HorizontalGravity::LeftGravity => offset_x,
+                HorizontalGravity::RightGravity => offset_x + width - text_width,
+                HorizontalGravity::CenterGravity => offset_x + width / 2. - text_width / 2.,
             };
 
-            let y = match std::mem::replace(&mut self.ver_gravity, VerticalGravity::TopGravity) {
-                VerticalGravity::TopGravity => {
-                    offset_y
-                }
-                VerticalGravity::BottomGravity => {
-                    offset_y + height - text_height
-                }
-                VerticalGravity::CenterGravity => {
-                    offset_y + height / 2 - text_height / 2
-                }
+            let y = match ver_gravity {
+                VerticalGravity::TopGravity => offset_y,
+                VerticalGravity::BottomGravity => offset_y + height - total_height,
+                VerticalGravity::CenterGravity => offset_y + height / 2. - total_height / 2.,
             };
 
-            draw_text_mut(img, color, x.abs() as u32, y.abs() as u32, scale, &self.inner, text.as_str());
+            draw_text_mut(
+                img,
+                color,
+                x.abs() as u32,
+                y.abs() as u32,
+                scale,
+                &self.inner,
+                &*wrap.clone(),
+            );
         }
         Ok(())
     }

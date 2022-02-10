@@ -1,18 +1,18 @@
 use std::cmp::max;
+use std::collections::HashMap;
+use std::env;
 use std::io::Cursor;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::env;
-use std::collections::HashMap;
 
 use actix_web::error::BlockingError;
 use actix_web::web;
 use bytes::Bytes;
 use err_context::AnyError;
 use image::codecs::gif;
-use image::{AnimationDecoder, DynamicImage, Frame, ImageFormat};
 use image::codecs::gif::Repeat;
+use image::{AnimationDecoder, DynamicImage, Frame, ImageFormat};
 use rusttype::{point, Font, Scale};
 
 use itertools::Itertools;
@@ -60,13 +60,9 @@ pub fn get_text_size(scale: Scale, font: &Font, text: &str) -> (i32, i32) {
     (w, h)
 }
 
-pub fn get_line_height(scale: Scale, font: &Font) -> f32 {
-    font.v_metrics(scale).line_gap
-}
-
 pub async fn process(
     bytes: Bytes,
-    f: impl Fn(DynamicImage) -> Result<DynamicImage, AnyError> + Send + Sync + Clone + 'static,
+    f: impl FnMut(DynamicImage) -> Result<DynamicImage, AnyError> + Send + Sync + Clone + 'static,
 ) -> Result<(Vec<u8>, bool), ImageError> {
     println!("Downloading...");
 
@@ -96,7 +92,7 @@ pub async fn process(
 
         Ok(frames)
     })
-        .await;
+    .await;
 
     if let Err(e) = get_frames {
         return Err(ImageError::ProcessingFailure(e.to_string()));
@@ -117,7 +113,7 @@ pub async fn process(
     for (i, frame) in frames.iter().enumerate() {
         let new_frames = new_frames.clone();
         let frame = frame.clone();
-        let f = f.clone();
+        let mut f = f.clone();
         joinables.push(web::block(move || {
             let mut new_frames = new_frames.lock().unwrap();
             let image = frame.buffer();
@@ -125,12 +121,10 @@ pub async fn process(
                 .unwrap()
                 .to_rgba8();
 
-            new_frames.insert(i, Frame::from_parts(
-                image,
-                frame.left(),
-                frame.top(),
-                frame.delay()
-            ));
+            new_frames.insert(
+                i,
+                Frame::from_parts(image, frame.left(), frame.top(), frame.delay()),
+            );
         }));
     }
 
@@ -175,9 +169,7 @@ pub async fn process(
             let image = DynamicImage::ImageRgba8(image.buffer().clone());
             match image {
                 DynamicImage::ImageRgba8(e) => e.save_with_format(&buf, ImageFormat::Png)?,
-                _ => {
-                    return Err(ImageError::BadRequest("Unsupported format!".to_string()).into())
-                }
+                _ => return Err(ImageError::BadRequest("Unsupported format!".to_string()).into()),
             }
 
             let bytes = std::fs::read(&buf)?;
@@ -189,7 +181,7 @@ pub async fn process(
 
         Err(ImageError::ProcessingFailure("No frames created".to_string()).into())
     })
-        .await;
+    .await;
 
     if let Err(e) = try_image {
         return Err(ImageError::ProcessingFailure(e.to_string()));
