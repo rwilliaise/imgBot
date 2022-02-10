@@ -8,11 +8,15 @@ Make sure to set the working directory to a temporary folder to decrease junk fi
 
 ## K8s run
 First, before deploying anything, add the imgbot namespace for convenience:
+
+
+Before anything else, apply the main imgbot.yaml file.
 ```bash
-kubectl apply -f kube/namespace-imgbot.yaml
+
+kubectl apply -f kube/imgbot.yaml
 ```
 
-Before anything else, add bot token and appid as a secret:
+Now, add bot token and appid as a secret:
 ```bash
 kubectl create secret generic imgbot-secret \
   --namespace=imgbot \
@@ -27,13 +31,7 @@ kubectl create secret generic imgbot-secret-tenor \
   --from-literal=apikey='INSERT TENOR API KEY' 
 ```
 
-Now, apply the main imgbot.yaml file.
-```bash
-
-kubectl apply -f kube/imgbot.yaml
-```
-
-Then, rollout both deployments:
+Then, check rollout of both deployments:
 ```bash
 kubectl rollout status --namespace=imgbot deployment/imgserver
 kubectl rollout status --namespace=imgbot deployment/imgbot

@@ -54,8 +54,8 @@ impl TenorClient {
         );
         let response = self.inner.get(request).send().await;
 
-        if let Err(_) = response {
-            return Err(TenorError::BadResponse("Non-2xx error code"));
+        if let Err(e) = response {
+            return Err(TenorError::RequestError(e.into()));
         }
 
         let response = response.unwrap();

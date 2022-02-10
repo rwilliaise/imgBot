@@ -28,8 +28,7 @@ impl CommandRun for CaptionsRun {
                 .await?;
 
             if let Err(e) = response {
-                crate::process::delay_delete(a.http, msg, Duration::from_millis(1000)).await;
-
+                crate::process::delay_delete(a.http.clone(), msg, Duration::from_millis(1000)).await;
                 return Err(CommandError::SourcedError("Failed caption request.\n\n", e).into());
             }
 
@@ -38,8 +37,7 @@ impl CommandRun for CaptionsRun {
             match response.error_for_status_ref() {
                 Ok(_) => (),
                 Err(_) => {
-                    crate::process::delay_delete(a.http, msg, Duration::from_millis(1000)).await;
-
+                    crate::process::delay_delete(a.http.clone(), msg, Duration::from_millis(1000)).await;
                     let text = response.text().await?;
                     return Err(CommandError::StringError(format!(
                         "Image server contact failure.\n\n{}",
@@ -75,11 +73,8 @@ impl CommandRun for CaptionsRun {
                 )
                 .await?;
 
-            tokio::spawn(async move {
-                tokio::time::sleep(Duration::from_millis(1000)).await;
-                msg.delete(a.http.clone()).await.unwrap();
-            })
-            .await?;
+
+            crate::process::delay_delete(a.http.clone(), msg, Duration::from_millis(1000)).await;
         };
 
         Ok(())

@@ -64,9 +64,7 @@ pub async fn delay_delete(http: Arc<Http>, msg: Message, duration: Duration) {
     tokio::spawn(async move {
         tokio::time::sleep(duration).await;
         msg.delete(http.clone()).await.unwrap();
-    })
-    .await
-    .expect("delayed delete failure");
+    });
 }
 
 pub fn get_args(str: &String) -> Vec<String> {
