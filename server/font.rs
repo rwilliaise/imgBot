@@ -1,9 +1,14 @@
+// TODO: pango?
+
 use crate::images;
 use err_context::AnyError;
 use image::Rgba;
 use imageproc::drawing::{draw_text_mut, Canvas};
 use rusttype::{Font, Scale};
+use std::sync::{Arc, Mutex};
 use textwrap::Options;
+
+static TEST_GLYPH: char = 'o';
 
 #[derive(Clone)]
 pub enum HorizontalGravity {
@@ -32,6 +37,12 @@ pub struct DrawableFont<'a> {
 }
 
 impl<'a> DrawableFont<'a> {
+    pub fn from(data: &'static [u8]) -> Arc<Mutex<Self>> {
+        let font = Vec::from(data);
+        let font = Font::try_from_vec(font).unwrap();
+        Arc::new(Mutex::new(DrawableFont::new(font)))
+    }
+
     pub fn new(font: Font<'a>) -> Self {
         Self {
             inner: font.clone(),
@@ -77,8 +88,8 @@ impl<'a> DrawableFont<'a> {
         let scale = self.scale.clone();
         let width: f32 = self.width.clone() as f32;
 
-        let (w, _) = images::get_text_size(scale, &self.inner, "o");
-        let cols: f32 = width / w as f32;
+        let (w, _) = images::get_glyph_size(scale, &self.inner, TEST_GLYPH);
+        let cols: f32 = width / w as f32 - 1.;
 
         let wrapped = textwrap::wrap(text.as_str(), cols as usize);
         let metrics = self.inner.v_metrics(scale);
@@ -86,6 +97,8 @@ impl<'a> DrawableFont<'a> {
         let mut w: f32 = 0.;
         let mut h: f32 = 0.;
         for wrap in wrapped {
+            let wrap = wrap.to_string();
+            let wrap = wrap.trim();
             let (text_width, _) = images::get_text_size(scale, &self.inner, &*wrap.clone());
             w = w.max(text_width.abs() as f32);
             h = h - metrics.descent + metrics.line_gap + metrics.ascent;
@@ -111,9 +124,10 @@ impl<'a> DrawableFont<'a> {
         let width = std::mem::take(&mut self.width) as f32;
         let height = std::mem::take(&mut self.height) as f32;
 
-        let (w, _) = images::get_text_size(scale, &self.inner, "o");
+        let (w, _) = images::get_glyph_size(scale, &self.inner, TEST_GLYPH);
+        dbg!(w);
         let w = w as f32;
-        let cols = width / w;
+        let cols = (width / w) - 1.;
 
         let wrapped = textwrap::wrap(
             text.as_str(),
@@ -121,18 +135,15 @@ impl<'a> DrawableFont<'a> {
         );
         let metrics = self.inner.v_metrics(scale);
 
-        dbg!(&total_height);
-        dbg!(&height);
-
         let mut wrap_y: f32 = 0.;
         for wrap in wrapped {
+            let wrap = wrap.to_string();
+            let wrap = wrap.trim();
             let (text_width, _) = images::get_text_size(scale, &self.inner, &*wrap.clone());
             let text_width = text_width as f32;
             let offset_y = offset_y + wrap_y;
 
             wrap_y = wrap_y - metrics.descent + metrics.line_gap + metrics.ascent;
-
-            dbg!(&wrap_y);
 
             let x = match hor_gravity {
                 HorizontalGravity::LeftGravity => offset_x,

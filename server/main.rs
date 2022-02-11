@@ -25,6 +25,7 @@ async fn main() -> io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(health)
             .service(crate::caption::caption)
+            .service(crate::severed::severed)
             .app_data(web::Data::new(AppState {
                 client: reqwest::Client::builder()
                     .user_agent("imgBot-server")

@@ -1,5 +1,6 @@
 pub mod caption;
 pub mod help;
+pub mod severed;
 
 use crate::bot::BotLock;
 use clap::ErrorKind;
@@ -12,11 +13,13 @@ use std::time::Duration;
 
 pub type CommandAppCreate = fn(String) -> clap::App<'static>;
 
+#[derive(Clone)]
 pub struct CommandRunArgs {
     pub http: Arc<Http>,
     pub bot: BotLock,
     pub matches: clap::ArgMatches,
     pub msg: Message,
+    pub name: String,
 }
 
 #[derive(Clone)]
@@ -69,6 +72,7 @@ impl Command {
                         bot,
                         matches,
                         msg,
+                        name: self.name.to_string().clone(),
                     })
                     .await;
 

@@ -2,14 +2,13 @@ use actix_web::*;
 use image::{DynamicImage, Rgba};
 use imageproc::drawing::{draw_filled_rect_mut, Canvas};
 use imageproc::rect::Rect;
-use rusttype::{Font, Scale};
-use std::sync::{Arc, Mutex};
+use rusttype::{Scale};
 
 use crate::font::{DrawableFont, HorizontalGravity, VerticalGravity};
 use crate::images::GenericImageRequest;
 use crate::{images, AppState};
 
-const CAPTION_FONT: &[u8] = include_bytes!("pack/caption.otf");
+static CAPTION_FONT: &[u8] = include_bytes!("pack/caption.otf");
 
 #[post("/caption")]
 pub async fn caption(
@@ -23,11 +22,7 @@ pub async fn caption(
     }
 
     let image = image.unwrap();
-
-    let font = Vec::from(CAPTION_FONT);
-    let font = Font::try_from_vec(font).unwrap();
-
-    let font = Arc::new(Mutex::new(DrawableFont::new(font)));
+    let font = DrawableFont::from(CAPTION_FONT);
 
     let text = request.text.clone();
 

@@ -13,7 +13,7 @@ use err_context::AnyError;
 use image::codecs::gif;
 use image::codecs::gif::Repeat;
 use image::{AnimationDecoder, DynamicImage, Frame, ImageFormat};
-use rusttype::{point, Font, Scale};
+use rusttype::{point, Font, Scale, IntoGlyphId, OutlineBuilder};
 
 use itertools::Itertools;
 use shared::ImageError;
@@ -27,6 +27,41 @@ pub struct GenericImageRequest {
 #[derive(serde::Deserialize)]
 pub struct ExploitableImageRequest {
     pub text: String,
+}
+
+struct MaxOutlineBuilder {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl OutlineBuilder for MaxOutlineBuilder {
+    fn move_to(&mut self, _: f32, _: f32) {
+    }
+
+    fn line_to(&mut self, x: f32, y: f32) {
+        self.max(x, y);
+    }
+
+    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
+        self.max(x, y);
+        self.max(x1, y1);
+    }
+
+    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
+        self.max(x, y);
+        self.max(x1, y1);
+        self.max(x2, y2);
+    }
+
+    fn close(&mut self) {
+    }
+}
+
+impl MaxOutlineBuilder {
+    fn max(&mut self, x: f32, y: f32) {
+        self.x = x.max(self.x);
+        self.y = y.max(self.y);
+    }
 }
 
 pub async fn get_bytes(client: &reqwest::Client, target_url: &String) -> Result<Bytes, ImageError> {
@@ -51,13 +86,26 @@ pub fn get_text_size(scale: Scale, font: &Font, text: &str) -> (i32, i32) {
     let (mut w, mut h) = (0, 0);
 
     for g in font.layout(text, scale, point(0.0, v_metrics.ascent)) {
-        if let Some(bb) = g.pixel_bounding_box() {
-            w = max(w, bb.max.x);
-            h = max(h, bb.max.y);
+        if let Some(_) = g.pixel_bounding_box() {
+            let mut outline = MaxOutlineBuilder { x: 0., y: 0. };
+            g.build_outline(&mut outline);
+
+            w = max(w, (outline.x + g.position().x) as i32);
+            h = max(h, (outline.y + g.position().y) as i32);
         }
     }
 
     (w, h)
+}
+
+pub fn get_glyph_size<C: IntoGlyphId>(scale: Scale, font: &Font, glyph: C) -> (i32, i32) {
+    let glyph = font.glyph(glyph);
+    let scaled = glyph.scaled(scale);
+
+    let mut outline = MaxOutlineBuilder { x: 0., y: 0. };
+    scaled.build_outline(&mut outline);
+
+    (outline.x as i32, outline.y as i32)
 }
 
 pub async fn process(

@@ -78,7 +78,8 @@ impl Display for TenorError {
             TenorError::InvalidLink => f.write_str("Invalid tenor link"),
             TenorError::BadResponse(str) => f.write_str(format!("Bad response: {}", str).as_str()),
             TenorError::RequestError(e) => {
-                f.write_str(format!("Cannot parse response: {:#?}", e).as_str())}
+                f.write_str(format!("Cannot parse response: {:#?}", e).as_str())
+            }
             TenorError::CannotParse(e) => {
                 f.write_str(format!("Cannot parse response: {:#?}", e).as_str())
             }

@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::env;
 use std::ops::Add;
 use std::sync::Arc;
+use crate::process::get_first_url;
 
 pub struct BotHandler {
     bot: BotLock,
@@ -41,27 +42,10 @@ impl EventHandler for BotHandler {
                 }
             }
 
-            let finder = LinkFinder::new();
-            let links: Vec<_> = finder.links(content).collect();
-
-            for link in links {
-                let string = link.as_str().to_string().clone();
-                if string.ends_with(".gif") || string.ends_with(".png") || string.ends_with(".jpg")
-                {
-                    let mut w = self.bot.write().await;
-                    w.latest_image
-                        .insert(_new_message.channel_id.clone(), string.clone());
-                } else {
-                    let url = url::Url::parse(link.as_str());
-
-                    if let Ok(url) = url {
-                        if url.host_str() == Some("tenor.com") {
-                            let mut w = self.bot.write().await;
-                            w.latest_image
-                                .insert(_new_message.channel_id.clone(), string.clone());
-                        }
-                    }
-                }
+            if let Some(url) = get_first_url(content).await {
+                let mut w = self.bot.write().await;
+                w.latest_image
+                    .insert(_new_message.channel_id.clone(), url);
             }
 
             let r = self.bot.read().await;
@@ -141,6 +125,7 @@ impl BotData {
 
     async fn add_commands(&mut self) {
         self.add_command(crate::command::caption::caption()).await;
+        self.add_command(crate::command::severed::severed()).await;
         self.add_command(crate::command::help::help()).await;
     }
 
