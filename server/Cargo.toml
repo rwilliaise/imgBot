@@ -1,6 +1,6 @@
 [package]
 name = "img_server"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["rwilliaise"]
 license = "MIT"
 edition = "2021"

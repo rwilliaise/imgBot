@@ -996,7 +996,7 @@ dependencies = [
 
 [[package]]
 name = "img_bot"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "clap",
  "err-context",
@@ -1013,7 +1013,7 @@ dependencies = [
 
 [[package]]
 name = "img_server"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "actix-rt",
  "actix-web",
@@ -2070,7 +2070,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "async-trait",
  "err-context",
