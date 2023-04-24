@@ -4,4 +4,6 @@
 
 typedef struct state state_t;
 
+
+
 #endif // SERVER_STATE_H_
