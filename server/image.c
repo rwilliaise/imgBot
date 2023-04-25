@@ -22,7 +22,7 @@ image_t *image_from_data (int width, int height, char *data) {
 }
 
 any_image_t *image_from_url(state_t *state, const char *url) {
-
+    
 
 	return NULL;
 }
