@@ -11,7 +11,6 @@
 typedef enum __attribute__((packed)) {
 	IMAGE_FORMAT_STILL,
 	IMAGE_FORMAT_ANIMATED_CONTAINER,
-	IMAGE_FORMAT_ANIMATED_FRAME,
 } format_t;
 
 typedef struct {
@@ -24,10 +23,9 @@ typedef struct {
 	char data[1];
 } image_t;
 
-// one frame from an animation
+// one frame from an animated image
 typedef struct {
-	SERVER_IMAGE_IMAGE_HEADER;
-	float frame_time; // length frame is displayed
+	float delay; // length frame is displayed
 	char data[1];
 } animated_image_frame_t;
 
@@ -42,7 +40,6 @@ typedef union {
 	image_header_t header;
 	image_t still;
 	animated_image_t animated_container;
-	animated_image_frame_t animated_frame;
 } any_image_t;
 
 image_t *image_from_data (int width, int height, char *data);

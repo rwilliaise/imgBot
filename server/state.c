@@ -10,12 +10,12 @@ struct state {
 };
 
 struct memory {
-    char *str;
+    uint8_t *str;
     size_t size;
 };
 
 static size_t state_curl_writefunction (void *ptr, size_t size, size_t nmemb, struct memory *ud) {
-    char *new_str = realloc(ud->str, ud->size += size * nmemb);
+    uint8_t *new_str = realloc(ud->str, ud->size += size * nmemb);
     if (new_str == NULL) {
         return 0;
     }
@@ -45,15 +45,17 @@ void state_free (state_t *S) {
    free(S);
 }
 
-char *state_geturl_async(state_t *S, const char *url, size_t *size) {
-    struct memory mem = { NULL, 1 };
+uint8_t *state_geturl_async(state_t *S, const char *url, size_t *size) {
+    struct memory mem = { NULL, 0 };
     curl_easy_setopt(S->curl, CURLOPT_URL, url);
-    curl_easy_setopt(S->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(S->curl, CURLOPT_MAXREDIRS, 10L);
 
     curl_easy_setopt(S->curl, CURLOPT_WRITEFUNCTION, state_curl_writefunction);
     curl_easy_setopt(S->curl, CURLOPT_WRITEDATA, &mem);
 
-    mem.str[mem.size - 1] = '\0';
+	if (size != NULL) {
+		*size = mem.size;
+	}
 
-    
+ 	return mem.str;   
 }

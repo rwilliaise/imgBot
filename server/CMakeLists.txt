@@ -6,8 +6,9 @@ set(IMGBOT_SERVER_COMPUTE_SOURCES
 add_executable(imgbot_server
 	main.c
 	image.c
+	state.c
 )
-target_link_libraries(imgbot_server websockets Threads::Threads)
+target_link_libraries(imgbot_server websockets CURL::libcurl Threads::Threads m)
 
 if (${OpenCL_FOUND})
 	target_link_libraries(imgbot_server OpenCL::OpenCL)
@@ -17,5 +18,5 @@ if (${OpenCL_FOUND})
 	)
 endif()
 
-target_sources(imgbot_server ${IMGBOT_SERVER_COMPUTE_SOURCES})
+target_sources(imgbot_server PRIVATE ${IMGBOT_SERVER_COMPUTE_SOURCES})
 
