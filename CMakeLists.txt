@@ -31,6 +31,8 @@ set(concord_LIBRARY ${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}discord${CM
 
 add_library(concord_lib STATIC IMPORTED)
 set_target_properties(concord_lib PROPERTIES IMPORTED_LOCATION ${concord_LIBRARY})
+
+make_directory(${INSTALL_DIR}/include) # auuugh
 target_include_directories(concord_lib INTERFACE ${INSTALL_DIR}/include)
 
 unset(concord_LIBRARY)
