@@ -1,4 +1,5 @@
 # imgBot
+<a href="https://raja.rocks/projects/E100P0814A00.html"><img alt="Static Badge" src="https://img.shields.io/badge/raja.rocks-E100P0814A00-lightgray?style=flat-square"></a>
 
 A discord bot focused on image manipulation and entertainment. Everything runs on K8s.
 
